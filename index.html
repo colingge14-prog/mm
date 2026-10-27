@@ -59,7 +59,7 @@
   <header style="padding-top: calc(1.5rem + env(safe-area-inset-top, 0px))" class="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white px-6 py-6 rounded-b-[2.5rem] shadow-lg shadow-blue-500/10">
     <div class="max-w-md mx-auto flex justify-between items-center">
       <div>
-        <h1 class="text-xl font-bold tracking-tight">💼 個人財務管理中心 <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full font-normal">v1.2.9</span></h1>
+        <h1 class="text-xl font-bold tracking-tight">💼 個人財務管理中心 <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full font-normal">v1.2.10</span></h1>
         <p class="text-xs opacity-80 mt-1">資產配置 · 預算監控 · 薪資消費統計</p>
       </div>
       <div class="flex items-center gap-2 shrink-0 pl-2">
@@ -292,7 +292,8 @@
       </div>
       <div class="p-5 space-y-4">
         <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl text-[11px] leading-relaxed text-slate-500">
-          <strong class="text-indigo-600 font-bold block mb-1">v1.2.9 更新內容</strong>
+          <strong class="text-indigo-600 font-bold block mb-1">v1.2.10 更新內容</strong>
+          修正 Android 手機無法選取備份檔的問題。<br>
           信用卡名稱可自訂，程式碼不再包含卡號；舊備份還原時自動轉換。<br>
           開啟新檔案時若沒有資料會提示還原備份；超過 7 天沒備份會提醒。<br>
           新增「複製為新紀錄」與「依卡片批次輸入」信用卡帳單。<br>
@@ -306,7 +307,7 @@
           
           <label class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer text-center shadow-sm">
             📤 還原歷史備份檔案
-            <input type="file" id="backup-file-input" class="hidden" accept=".json" onchange="importSystemData(event)">
+            <input type="file" id="backup-file-input" class="hidden" onchange="importSystemData(event)">
           </label>
         </div>
 
@@ -689,7 +690,7 @@
     function renderNotice() {
       const box = document.getElementById("dash-notice");
       if (noticeDismissed) { box.innerHTML = ""; return; }
-      const restoreBtn = `<label class="cursor-pointer text-[11px] font-bold bg-white text-amber-800 border border-amber-300 px-3 py-1.5 rounded-full">還原備份檔<input type="file" class="hidden" accept=".json,application/json" onchange="importSystemData(event)"></label>`;
+      const restoreBtn = `<label class="cursor-pointer text-[11px] font-bold bg-white text-amber-800 border border-amber-300 px-3 py-1.5 rounded-full">還原備份檔<input type="file" class="hidden" onchange="importSystemData(event)"></label>`;
       const closeBtn = `<button onclick="noticeDismissed=true; renderNotice()" class="text-[11px] text-slate-500 px-2 py-1.5">先不用</button>`;
       if (isFreshStart) {
         box.innerHTML = `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
@@ -1568,7 +1569,7 @@
     function exportSystemData() {
       const payload = { appId: "personal_finance_manager_tw", schemaVersion: "1.0", data: state };
       const a = document.createElement('a');
-      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+      a.href = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
       a.download = `財務備份_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       state.meta = { ...(state.meta || {}), lastBackupAt: new Date().toISOString() };
@@ -1578,6 +1579,11 @@
     }
     function importSystemData(event) {
       const file = event.target.files[0]; if (!file) return;
+      // 手機選檔不限類型，選錯檔案時給明確提示
+      if (file.size > 5 * 1024 * 1024 || /\.(jpe?g|png|gif|heic|webp|mp4|pdf)$/i.test(file.name)) {
+        event.target.value = "";
+        return showToast("請選擇「財務備份_日期.json」這個檔案", "error");
+      }
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
