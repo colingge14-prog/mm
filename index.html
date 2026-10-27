@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d4ed8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <title>財務管理中心</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1d4ed8',
+            secondary: '#4338ca',
+            accent: '#7c3aed',
+          },
+          borderRadius: {
+            'xl': '12px',
+            '2xl': '16px',
+            '3xl': '24px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 隱藏滾動條但保持功能 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* 用於防止底部導航遮擋內容 */
+    body {
+      padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+      font-family: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      font-variant-numeric: tabular-nums; /* 金額數字對齊 */
+    }
+    /* 鍵盤操作時可見的焦點框 */
+    button:focus-visible, input:focus-visible, select:focus-visible, [onclick]:focus-visible {
+      outline: 2px solid #6366f1; outline-offset: 2px;
+    }
+    input:focus, select:focus { border-color: #818cf8 !important; background-color: #fff !important; }
+    /* iOS 輸入框字級小於 16px 會自動放大畫面 */
+    @media (max-width: 640px) { input, select { font-size: 16px !important; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+
+  <!-- 提示條 -->
+  <div id="toast" role="status" aria-live="polite" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-4 py-2.5 rounded-full text-xs font-semibold shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-[100] flex items-center gap-2 backdrop-blur-sm"></div>
+
+  <!-- 頂部精美漸層導航 -->
+  <header style="padding-top: calc(1.5rem + env(safe-area-inset-top, 0px))" class="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white px-6 py-6 rounded-b-[2.5rem] shadow-lg shadow-blue-500/10">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight">💼 個人財務管理中心 <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full font-normal">v1.2.9</span></h1>
+        <p class="text-xs opacity-80 mt-1">資產配置 · 預算監控 · 薪資消費統計</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0 pl-2">
+        <button onclick="openSettingsModal()" aria-label="系統設定與資料備份" class="shrink-0 bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all" title="系統設定與資料備份">
+          <svg class="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+        <button onclick="openAddModal()" class="shrink-0 whitespace-nowrap bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-full backdrop-blur-sm transition-all flex items-center gap-1.5 font-medium">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+          快速記帳
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 mt-5">
+
+    <!-- DASHBOARD (總覽) -->
+    <div id="sec-dash" class="section space-y-4">
+      <div id="dash-notice" class="empty:hidden space-y-2"></div>
+      <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 text-white shadow-xl shadow-indigo-950/20 relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl"></div>
+        <div class="absolute -left-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl"></div>
+        <div class="relative z-10">
+          <label class="text-xs text-slate-300 font-medium tracking-wider flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            當前活存總資產 <span id="dash-asof" class="text-slate-400"></span>
+          </label>
+          <div class="text-3xl font-extrabold mt-2 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-blue-200" id="dash-assets">TWD 0</div>
+          
+          <div class="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-white/10 text-xs">
+            <div>
+              <div class="text-slate-400" id="dash-lbl-inc">月均收入</div>
+              <div class="font-bold text-sm text-blue-200 mt-1" id="dash-avg-income">$0</div>
+            </div>
+            <div>
+              <div class="text-slate-400" id="dash-lbl-exp">月均支出</div>
+              <div class="font-bold text-sm text-rose-300 mt-1" id="dash-avg-expense">$0</div>
+            </div>
+            <div>
+              <div class="text-slate-400" id="dash-lbl-rate">儲蓄率</div>
+              <div class="font-bold text-sm text-emerald-400 mt-1" id="dash-savings-rate">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3" id="dash-kpi"></div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-blue-600 rounded-full"></span>📊 財務健康監控
+          </h3>
+          <span class="text-[10px] text-slate-400">本機分析</span>
+        </div>
+        <div class="space-y-3" id="dash-health"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-indigo-600 rounded-full"></span>💳 近 6 個月收支趨勢
+        </h3>
+        <div class="relative h-[210px] w-full"><canvas id="dashChart"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-violet-600 rounded-full"></span>🏦 活期存款分配
+        </h3>
+        <div class="relative h-[260px] w-full"><canvas id="bankChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- SALARY (薪資) -->
+    <div id="sec-salary" class="section hidden space-y-4">
+      <div class="grid grid-cols-2 gap-3" id="salary-stat-grid"></div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-blue-600 rounded-full"></span>年度薪資統計
+        </h3>
+        <div class="relative h-[210px] w-full"><canvas id="salaryChart"></canvas></div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-emerald-600 rounded-full"></span>底薪成長歷程
+        </h3>
+        <div id="base-growth" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- CASHFLOW (收支) -->
+    <div id="sec-cashflow" class="section hidden space-y-4">
+      <div class="flex bg-slate-200/60 p-1.5 rounded-full">
+        <button id="btn-cf-month" class="flex-1 text-center py-2 text-xs font-semibold rounded-full bg-white text-indigo-700 shadow-sm transition-all" onclick="switchCfView('month')">月度明細</button>
+        <button id="btn-cf-quarter" class="flex-1 text-center py-2 text-xs font-semibold rounded-full text-slate-600 transition-all" onclick="switchCfView('quarter')">季度回顧</button>
+        <button id="btn-cf-year" class="flex-1 text-center py-2 text-xs font-semibold rounded-full text-slate-600 transition-all" onclick="switchCfView('year')">年度回顧</button>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-blue-600 rounded-full"></span><span id="cf-chart-title">月度實領薪資 vs 信用卡消費</span>
+        </h3>
+        <div class="relative h-[210px] w-full"><canvas id="cashflowChart"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-indigo-600 rounded-full"></span><span id="cf-list-title">月度收支結餘明細</span>
+          </h3>
+          <span class="text-xs text-indigo-600 font-medium" id="cf-list-subtitle">排序：最新在前</span>
+        </div>
+        <div id="cf-list-month" class="max-h-[360px] overflow-y-auto space-y-2 no-scrollbar"></div>
+        <div id="cf-list-quarter" class="max-h-[360px] overflow-y-auto space-y-2 no-scrollbar hidden"></div>
+        <div id="cf-list-year" class="max-h-[360px] overflow-y-auto space-y-2 no-scrollbar hidden"></div>
+      </div>
+    </div>
+
+    <!-- CREDIT (消費) -->
+    <div id="sec-credit" class="section hidden space-y-4">
+      <div class="grid grid-cols-3 gap-2" id="credit-stats"></div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-indigo-600 rounded-full"></span>月度消費總趨勢
+        </h3>
+        <div class="relative h-[210px] w-full"><canvas id="creditChart"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
+          <span class="w-1.5 h-3.5 bg-purple-600 rounded-full"></span>各信用卡月帳單明細 <span class="text-[9px] font-normal text-slate-400 pl-1">(點擊卡片可直接修改)</span>
+        </h3>
+        <div class="max-h-[360px] overflow-y-auto space-y-2 no-scrollbar" id="credit-list"></div>
+      </div>
+    </div>
+
+    <!-- BUDGET (預算) -->
+    <div id="sec-budget" class="section hidden space-y-4">
+      <div class="grid grid-cols-2 gap-3" id="budget-top"></div>
+      <div id="budget-result"></div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-rose-500 rounded-full"></span>各預算分類與調整
+          </h3>
+          <span class="text-xs text-rose-500 font-medium cursor-pointer" onclick="openBudgetModal()">✏️ 調整配額</span>
+        </div>
+        <div id="budget-bars" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <!-- INSURANCE (保險) -->
+    <div id="sec-ins" class="section hidden space-y-4">
+      <!-- 年份切換器 -->
+      <div id="ins-year-tabs" class="flex bg-slate-200/60 p-1.5 rounded-full overflow-x-auto no-scrollbar gap-1"></div>
+
+      <!-- 單一年度視角 -->
+      <div id="ins-yearly-view" class="space-y-4">
+        <div id="ins-hero"></div>
+
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+              <span class="w-1.5 h-3.5 bg-amber-600 rounded-full"></span>📋 <span id="ins-list-title-year">年度</span>保險清單
+            </h3>
+            <button onclick="openInsModal()" class="text-xs text-amber-600 font-bold hover:text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 transition-all">➕ 新增保單</button>
+          </div>
+          <div id="ins-list" class="divide-y divide-slate-100"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+          <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-slate-700 rounded-full"></span>📅 <span id="ins-timeline-title-year">年度</span>保費扣款時程表
+          </h3>
+          <div id="ins-timeline" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- 跨年度比較視角 -->
+      <div id="ins-compare-view" class="space-y-4 hidden">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+          <h3 class="font-bold text-slate-900 text-sm mb-4 flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-indigo-600 rounded-full"></span>📊 歷年總保費趨勢
+          </h3>
+          <div class="relative h-[210px] w-full"><canvas id="insCompareChart"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+          <h3 class="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-rose-500 rounded-full"></span>📈 跨年保費增減分析
+          </h3>
+          <div id="ins-compare-details" class="space-y-1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANK (存款) -->
+    <div id="sec-bank" class="section hidden space-y-4">
+      <div id="bank-hero"></div>
+      <div id="bank-list" class="space-y-3"></div>
+    </div>
+
+    <!-- DETAIL TABLES (明細) -->
+    <div id="sec-table" class="section hidden space-y-4">
+      <div class="flex bg-slate-200/60 p-1.5 rounded-full">
+        <button class="flex-1 text-center py-2 text-xs font-semibold rounded-full active-tab-btn active bg-white text-blue-600 shadow-sm" onclick="switchTbl('salary', this)">薪資收入單</button>
+        <button class="flex-1 text-center py-2 text-xs font-semibold rounded-full active-tab-btn text-slate-600" onclick="switchTbl('cc', this)">信用卡消費單</button>
+      </div>
+
+      <p class="text-[10px] text-slate-400 px-1">點任一列可編輯、複製或刪除；信用卡表點卡片名稱可批次輸入該卡</p>
+      <div id="tbl-salary" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 overflow-hidden"></div>
+      <div id="tbl-cc" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 overflow-hidden hidden"></div>
+    </div>
+
+  </main>
+
+  <!-- ⚙️ 系統設定與資料備份彈出視窗 -->
+  <div id="settings-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-y-auto max-h-[88vh] shadow-2xl">
+      <div class="bg-slate-800 px-5 py-4 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm">⚙️ 系統與備份設定</h4>
+        <button onclick="closeSettingsModal()" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl text-[11px] leading-relaxed text-slate-500">
+          <strong class="text-indigo-600 font-bold block mb-1">v1.2.9 更新內容</strong>
+          信用卡名稱可自訂，程式碼不再包含卡號；舊備份還原時自動轉換。<br>
+          開啟新檔案時若沒有資料會提示還原備份；超過 7 天沒備份會提醒。<br>
+          新增「複製為新紀錄」與「依卡片批次輸入」信用卡帳單。<br>
+          年度自動判斷（新增 2026 下半年或 2027 資料會自動納入統計）、薪資單可編輯與刪除、保單可整年複製、按 Esc 或點背景可關閉視窗。資料仍存在本機瀏覽器，建議定期下載備份。
+        </div>
+
+        <div class="space-y-2">
+          <button onclick="exportSystemData()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm">
+            📥 手動備份並下載資料 (.json)
+          </button>
+          
+          <label class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer text-center shadow-sm">
+            📤 還原歷史備份檔案
+            <input type="file" id="backup-file-input" class="hidden" accept=".json" onchange="importSystemData(event)">
+          </label>
+        </div>
+
+        <div class="border-t border-slate-100 pt-3 space-y-2">
+          <div class="text-xs font-bold text-slate-700">信用卡顯示名稱</div>
+          <p class="text-[10px] text-slate-400 leading-relaxed">名稱只存在這台裝置與備份檔裡，不會出現在網頁程式碼中。建議不要填卡號。</p>
+          <div id="card-label-inputs" class="grid grid-cols-2 gap-2"></div>
+          <button onclick="saveCardLabels()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2 rounded-xl text-xs">儲存卡片名稱</button>
+        </div>
+
+        <div class="border-t border-slate-100 pt-3">
+          <button onclick="openConfirmResetModal()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 rounded-xl text-xs transition-all">
+            ⚠️ 清除所有自訂數據 (還原預設)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚠️ 一鍵重設確認彈窗 -->
+  <div id="confirm-reset-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+    <div class="bg-white rounded-2xl w-full max-w-xs p-5 shadow-2xl space-y-4">
+      <h5 class="font-bold text-slate-800 text-sm text-center">確定要重設為預設值？</h5>
+      <p class="text-xs text-slate-500 text-center leading-relaxed">此操作將清除所有數據，並還原至系統初始狀態，<strong>本動作無法復原！</strong></p>
+      <div class="flex gap-2">
+        <button onclick="closeConfirmResetModal()" class="flex-1 bg-slate-100 text-slate-600 font-semibold py-2 rounded-lg text-xs">取消</button>
+        <button onclick="executeResetData()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 rounded-lg text-xs">確定清除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快速記帳 / 調整彈出表單 (Modal) -->
+  <div id="add-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+      <div class="bg-gradient-to-r from-blue-700 to-indigo-700 px-5 py-4 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm" id="add-modal-title">🆕 快速新增紀錄</h4>
+        <button onclick="closeAddModal()" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">記錄類型</label>
+          <select id="modal-type" onchange="onModalTypeChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+            <option value="salary">薪資單</option>
+            <option value="credit">信用卡月帳單</option>
+          </select>
+        </div>
+
+        <div id="modal-salary-fields" class="space-y-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">西元年</label><input type="number" id="sal-year" value="2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">月份</label><input type="number" id="sal-month" value="6" min="1" max="12" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">應發 (總額)</label><input type="number" id="sal-gross" oninput="updateAddPreview()" inputmode="numeric" value="" placeholder="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">應扣 (勞健)</label><input type="number" id="sal-ded" oninput="updateAddPreview()" inputmode="numeric" value="" placeholder="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">本薪</label><input type="number" id="sal-base" inputmode="numeric" value="" placeholder="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">性質</label><select id="sal-isbonus" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"><option value="false">一般月薪</option><option value="true">獎金/年終</option></select></div>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-500 mb-1">備註 / 獎金內容</label><input type="text" id="sal-note" placeholder="例如：季獎金、端午節金" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+          <div class="flex justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-xs"><span class="text-blue-700">實發淨額（自動計算）</span><strong class="text-blue-700" id="sal-net-preview">$0</strong></div>
+        </div>
+
+        <div id="modal-credit-fields" class="space-y-3 hidden">
+          <button type="button" onclick="closeAddModal(); openCardBatch()" class="w-full text-left text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2">想一次輸入同一張卡好幾個月？改用<strong>依卡片批次輸入</strong></button>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1">月份 (YYYY/MM)</label><input type="text" id="cc-month-label" value="2026/06" placeholder="2026/06" inputmode="numeric" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label data-cclabel="cardB" class="block text-xs font-semibold text-slate-500 mb-1">cardB</label><input type="number" id="cc-cardB" value="0" oninput="updateAddPreview()" inputmode="numeric" onfocus="this.select()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div><label data-cclabel="台新" class="block text-xs font-semibold text-slate-500 mb-1">台新</label><input type="number" id="cc-taishin" value="0" oninput="updateAddPreview()" inputmode="numeric" onfocus="this.select()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label data-cclabel="cardA" class="block text-xs font-semibold text-slate-500 mb-1">cardA</label><input type="number" id="cc-cardA" value="0" oninput="updateAddPreview()" inputmode="numeric" onfocus="this.select()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label data-cclabel="中信" class="block text-xs font-semibold text-slate-500 mb-1">中信</label><input type="number" id="cc-ctbc" value="0" oninput="updateAddPreview()" inputmode="numeric" onfocus="this.select()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label data-cclabel="兆豐" class="block text-xs font-semibold text-slate-500 mb-1">兆豐</label><input type="number" id="cc-megabank" value="0" oninput="updateAddPreview()" inputmode="numeric" onfocus="this.select()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+            <div><label data-cclabel="玉山" class="block text-xs font-semibold text-slate-500 mb-1">玉山</label><input type="number" id="cc-esun" value="0" oninput="updateAddPreview()" inputmode="numeric" onfocus="this.select()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none"></div>
+          </div>
+          <div class="flex justify-between items-center bg-violet-50 border border-violet-100 rounded-xl px-3 py-2 text-xs"><span class="text-violet-700">本月帳單合計</span><strong class="text-violet-700" id="cc-total-preview">$0</strong></div>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="add-delete-btn" onclick="armDelete(this, deleteRecord)" class="px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 rounded-xl text-xs transition-all hidden">刪除</button>
+          <button id="add-copy-btn" onclick="copyAsNew()" class="px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-xs transition-all hidden whitespace-nowrap">📋 複製</button>
+          <button id="add-save-btn" onclick="saveRecord()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-xs shadow-md transition-all">儲存紀錄</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 依卡片批次輸入彈窗 -->
+  <div id="card-batch-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="bg-gradient-to-r from-violet-700 to-indigo-700 px-5 py-4 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm">💳 依卡片批次輸入</h4>
+        <button onclick="closeCardBatch()" aria-label="關閉" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-3 border-b border-slate-100">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">信用卡</label>
+          <div id="cb-card-tabs" class="grid grid-cols-3 gap-1.5"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">最後一個月 (YYYY/MM)</label>
+            <input type="text" id="cb-end" inputmode="numeric" placeholder="2026/05" onchange="buildCardBatchRows()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">往前幾個月</label>
+            <select id="cb-count" onchange="buildCardBatchRows()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+              <option value="1">1 個月</option><option value="2">2 個月</option><option value="3" selected>3 個月</option><option value="4">4 個月</option><option value="5">5 個月</option><option value="6">6 個月</option><option value="9">9 個月</option><option value="12">12 個月</option>
+            </select>
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-relaxed">只會更新這張卡的金額，同月份其他卡片不受影響。留空的月份不會變動，填 0 代表當月沒消費。</p>
+      </div>
+      <div id="cb-rows" class="p-5 space-y-2 overflow-y-auto no-scrollbar flex-1"></div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100 space-y-2">
+        <div class="flex justify-between text-xs px-1"><span class="text-slate-500" id="cb-summary-label">這張卡合計</span><strong class="text-violet-700" id="cb-summary">$0</strong></div>
+        <button onclick="saveCardBatch()" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all">儲存這張卡的帳單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 存款餘額微調彈窗 -->
+  <div id="bank-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+      <div class="bg-emerald-600 px-5 py-4 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm">🏦 調整活存餘額</h4>
+        <button onclick="closeBankModal()" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">銀行</label><input type="text" id="bm-bank" disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-500 outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">帳戶類型</label><input type="text" id="bm-acc-name" disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-500 outline-none"></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">活存餘額 (TWD)</label><input type="number" id="bm-balance" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none font-bold text-slate-800"></div>
+        <button onclick="saveBankBalance()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-xs shadow-md transition-all">儲存並更新</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 預算額度修改彈窗 -->
+  <div id="budget-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+      <div class="bg-rose-600 px-5 py-4 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm">✏️ 調整年度預算額度</h4>
+        <button onclick="closeBudgetModal()" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 max-h-[400px] overflow-y-auto space-y-3 no-scrollbar" id="budget-edit-list"></div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+        <button onclick="saveBudgets()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all">確認修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保險項目手動輸入/編輯彈窗 (新增年度欄位) -->
+  <div id="ins-modal-panel" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col">
+      <div class="bg-amber-600 px-5 py-4 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm" id="ins-modal-title">🛡️ 保單資料設定</h4>
+        <button onclick="closeInsModal()" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-3 overflow-y-auto max-h-[60vh] no-scrollbar">
+        <input type="hidden" id="ins-orig-idx">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">保險名稱</label>
+          <input type="text" id="ins-name" placeholder="例如：○○人壽 / ○○產險" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">保障對象</label>
+          <input type="text" id="ins-cover" placeholder="例如：個人 / 配偶 / 家人" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">年度(YYYY)</label>
+            <input type="number" id="ins-year-input" placeholder="2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">扣款月份</label>
+            <input type="number" id="ins-month" min="1" max="12" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">扣款日期</label>
+            <input type="number" id="ins-day" min="1" max="31" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">年繳保費 (TWD)</label>
+            <input type="number" id="ins-annual" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none font-bold text-amber-700">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">扣款信用卡</label>
+            <select id="ins-card" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+              <option value="兆豐">兆豐信用卡</option>
+              <option value="台新">台新信用卡</option>
+              <option value="玉山">玉山信用卡</option>
+              <option value="中信">中國信託卡</option>
+              <option value="國泰">國泰世華卡</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">繳費週期 / 備註</label>
+          <input type="text" id="ins-note" value="年繳" placeholder="年繳 / 月繳" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+        </div>
+      </div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+        <button id="ins-delete-btn" onclick="armDelete(this, deleteInsurance)" class="px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 rounded-xl text-xs transition-all hidden">刪除</button>
+        <button onclick="saveInsurance()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all">儲存保單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 健康指標彈窗 -->
+  <div id="health-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+      <div id="health-modal-header" class="px-5 py-4 text-white flex justify-between items-center transition-all duration-300">
+        <h4 class="font-bold text-sm" id="hm-title">📊 指標分析詳情</h4>
+        <button onclick="closeHealthModal()" class="text-white/80 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-4 no-scrollbar" id="health-modal-content"></div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100">
+        <button onclick="closeHealthModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2.5 rounded-xl text-xs transition-all">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部固定導航 (Bottom Navigation) -->
+  <nav aria-label="主選單" style="padding-bottom: calc(0.375rem + env(safe-area-inset-bottom, 0px))" class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200/80 shadow-lg px-1 pt-1.5 z-40 flex justify-around max-w-none">
+    <button class="nav-btn active flex flex-col items-center justify-center text-blue-600 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('dash', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span class="text-[10px] font-bold mt-1">總覽</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('salary', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="text-[10px] font-medium mt-1">薪資</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('cashflow', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="text-[10px] font-medium mt-1">收支</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('credit', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <span class="text-[10px] font-medium mt-1">消費</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('budget', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="text-[10px] font-medium mt-1">預算</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('ins', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span class="text-[10px] font-medium mt-1">保險</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('bank', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="10" width="18" height="11" rx="1"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>
+      <span class="text-[10px] font-medium mt-1">存款</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center justify-center text-slate-400 flex-1 min-w-0 h-12 rounded-xl transition-all" onclick="switchSec('table', this)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="text-[10px] font-medium mt-1">明細</span>
+    </button>
+  </nav>
+
+  <script>
+    const fmt = n => (Number(n) || 0).toLocaleString('zh-TW');
+    const wan = n => `$${((Number(n) || 0) / 10000).toFixed(1)} 萬`;
+    const pad2 = n => String(n).padStart(2, "0");
+    const ymKey = (y, m) => `${y}/${pad2(m)}`;
+    const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const FONT_STACK = "'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', sans-serif";
+    const todayISO = () => { const t = new Date(); return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`; };
+    const toRoc = iso => { if (!iso) return ""; const [y, m, d] = iso.split("-"); return `${parseInt(y) - 1911}/${m}/${d}`; };
+    const STORAGE_KEY = 'PFM_DATA_V1_2_4'; // 兼容繼承 v1.2.4 的資料庫
+
+    // ── 初始預設資料 ──
+    // ── 初始預設資料（公開版：不含任何個人資料，真實資料只存在你的瀏覽器裡） ──
+    const DEFAULT_STATE = {
+      meta: { balanceUpdatedAt: null },
+      salaryData: [],
+      ccRaw: [],
+      budgetData: {
+        "子女教育": 0, "食衣住行": 0, "保險費用": 0, "交通相關": 0,
+        "房屋相關": 0, "紅包": 0, "稅務": 0, "通訊費用": 0, "退休規劃": 0
+      },
+      bankAccounts: [],
+      insurances: []
+    };
+
+    let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+    const ccKeys = ["台新", "cardA", "cardB", "中信", "兆豐", "玉山"];
+    // 卡片顯示名稱：預設中性名稱，可在 ⚙️ 設定自訂；自訂名稱只存在本機與備份檔
+    const DEFAULT_CARD_LABELS = { 台新: "台新", cardA: "卡片A", cardB: "卡片B", 中信: "中信", 兆豐: "兆豐", 玉山: "玉山" };
+    let ccLabels = ccKeys.map(k => DEFAULT_CARD_LABELS[k]);
+    function refreshCardLabels() {
+      const custom = state.meta?.cardLabels || {};
+      ccLabels = ccKeys.map(k => (custom[k] || "").trim() || DEFAULT_CARD_LABELS[k]);
+      document.querySelectorAll("[data-cclabel]").forEach(el => { el.textContent = ccLabels[ccKeys.indexOf(el.dataset.cclabel)]; });
+    }
+    // 舊版資料（v1.2.8 以前）的卡片欄位名稱自動轉換：
+    // 不認得的欄位依原本順序對應到 cardA、cardB（程式碼裡不保留舊名稱）
+    function migrateCardKeys(rows) {
+      (rows || []).forEach(r => {
+        const unknown = Object.keys(r).filter(k => k !== "m" && !ccKeys.includes(k));
+        const slots = ["cardA", "cardB"].filter(k => !(k in r));
+        unknown.forEach((k, i) => { if (slots[i]) r[slots[i]] = Number(r[k]) || 0; delete r[k]; });
+      });
+      return rows;
+    }
+
+    const charts = {};
+    Chart.defaults.font.family = FONT_STACK;
+    Chart.defaults.color = "#64748b";
+    Chart.defaults.plugins.tooltip.callbacks.label = ctx => ` ${ctx.dataset.label || ""}: $${fmt(ctx.raw)}`;
+    let currentCfView = 'month';
+    // 預設檢視最新年份
+    let currentInsYear = 2026;
+
+    // ── LocalStorage 與資料模組 ──
+    function showToast(message, type = "success") {
+      const toast = document.getElementById("toast");
+      if (!toast) return;
+      let icon = "🎉";
+      if (type === "error") icon = "❌";
+      if (type === "info") icon = "ℹ️";
+      toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+      toast.className = "fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-5 py-3 rounded-full text-xs font-semibold shadow-2xl transition-all duration-300 opacity-100 scale-100 z-[100] flex items-center gap-2.5 backdrop-blur-sm";
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => {
+        toast.className = "fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-5 py-3 rounded-full text-xs font-semibold shadow-2xl transition-all duration-300 opacity-0 scale-95 pointer-events-none z-[100] flex items-center gap-2.5 backdrop-blur-sm";
+      }, 3000);
+    }
+
+    function sortData() {
+      state.salaryData.sort((a, b) => a.year - b.year || a.month - b.month || (a.isBonus === b.isBonus ? String(a.id).localeCompare(String(b.id)) : a.isBonus ? -1 : 1));
+      state.ccRaw.sort((a, b) => a.m.localeCompare(b.m));
+    }
+
+    let isFreshStart = false, noticeDismissed = false;
+    function initData() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        isFreshStart = !stored;
+        if (stored) {
+          state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(stored));
+          (state.insurances || []).forEach(ins => { if (!ins.year) ins.year = 2025; });
+          migrateCardKeys(state.ccRaw);
+        }
+      } catch (e) {}
+      if (!state.meta) state.meta = { ...DEFAULT_STATE.meta };
+      sortData();
+      const insYrs = state.insurances.map(i => i.year || 2025);
+      currentInsYear = insYrs.length ? Math.max(...insYrs) : getDerivedData().curYear;
+    }
+
+    function autoSave() {
+      if (!state.meta) state.meta = {};
+      state.meta.lastSavedAt = new Date().toISOString();
+      isFreshStart = false;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      catch (e) { showToast("瀏覽器無法存檔，請立即下載備份", "error"); }
+    }
+
+    // 總覽頂端提示：新檔案沒有資料 / 太久沒備份
+    function renderNotice() {
+      const box = document.getElementById("dash-notice");
+      if (noticeDismissed) { box.innerHTML = ""; return; }
+      const restoreBtn = `<label class="cursor-pointer text-[11px] font-bold bg-white text-amber-800 border border-amber-300 px-3 py-1.5 rounded-full">還原備份檔<input type="file" class="hidden" accept=".json,application/json" onchange="importSystemData(event)"></label>`;
+      const closeBtn = `<button onclick="noticeDismissed=true; renderNotice()" class="text-[11px] text-slate-500 px-2 py-1.5">先不用</button>`;
+      if (isFreshStart) {
+        box.innerHTML = `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+          <div class="text-xs font-bold text-amber-900">這裡還沒有你的資料</div>
+          <p class="text-[11px] text-amber-800 leading-relaxed">資料只存在你這台裝置的瀏覽器裡，不會上傳到網站。第一次使用請還原備份檔（在舊版本的「⚙️ 設定 → 手動備份並下載資料」下載），之後用同一個網址開啟就會一直記得。</p>
+          <div class="flex items-center gap-2 pt-1">${restoreBtn}${closeBtn}</div></div>`;
+        return;
+      }
+      const last = state.meta?.lastBackupAt ? new Date(state.meta.lastBackupAt) : null;
+      const saved = state.meta?.lastSavedAt ? new Date(state.meta.lastSavedAt) : null;
+      const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+      if (saved && (!last || (saved > last && days >= 7))) {
+        box.innerHTML = `<div class="p-3 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between gap-2">
+          <div class="text-[11px] text-slate-600 leading-relaxed">${last ? `上次備份是 ${days} 天前，之後有新的紀錄` : "你還沒有下載過備份"}。資料只存在這支手機的這個檔案裡，建議定期備份。</div>
+          <button onclick="exportSystemData()" class="shrink-0 text-[11px] font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full">立即備份</button></div>`;
+        return;
+      }
+      box.innerHTML = "";
+    }
+
+    function getDerivedData() {
+      const processedCC = state.ccRaw.map(r => ({ ...r, total: ccKeys.reduce((s, k) => s + (Number(r[k]) || 0), 0) }));
+      const totalBudget = Object.values(state.budgetData).reduce((s, v) => s + (Number(v) || 0), 0);
+      const totalCash = state.bankAccounts.reduce((s, b) => s + b.accounts.reduce((ss, a) => ss + (Number(a.bal) || 0), 0), 0);
+
+      // 以資料中最新的年份為「今年」，前一年為完整回顧年
+      const allYears = [...state.salaryData.map(s => s.year), ...processedCC.map(c => parseInt(c.m))].filter(Number.isFinite);
+      const curYear = allYears.length ? Math.max(...allYears) : new Date().getFullYear();
+      const prevYear = curYear - 1;
+
+      const years = [...new Set(state.salaryData.map(s => s.year))].sort((a, b) => a - b);
+      const annualSalary = years.map(yr => {
+        const rows = state.salaryData.filter(s => s.year === yr);
+        return {
+          year: yr, months: new Set(rows.map(r => r.month)).size,
+          total: rows.reduce((s, r) => s + r.net, 0),
+          bonus: rows.filter(r => r.isBonus).reduce((s, r) => s + r.net, 0),
+          regular: rows.filter(r => !r.isBonus).reduce((s, r) => s + r.net, 0)
+        };
+      });
+
+      const ccOfYear = yr => processedCC.filter(c => c.m.startsWith(yr + "/"));
+      const prevCCRows = ccOfYear(prevYear), curCCRows = ccOfYear(curYear);
+      const totalPrevCC = prevCCRows.reduce((s, c) => s + c.total, 0);
+      const totalCurCC = curCCRows.reduce((s, c) => s + c.total, 0);
+      const avgPrevCCMonth = prevCCRows.length ? Math.round(totalPrevCC / prevCCRows.length) : 0;
+      const salaryPrev = annualSalary.find(y => y.year === prevYear)?.total || 0;
+
+      // 逐月收支：涵蓋前一年起所有有薪資或帳單的月份
+      const keySet = new Set();
+      state.salaryData.forEach(s => { if (s.year >= prevYear) keySet.add(ymKey(s.year, s.month)); });
+      processedCC.forEach(c => { if (parseInt(c.m) >= prevYear) keySet.add(c.m); });
+      const comparison = [...keySet].sort().map(key => {
+        const [yr, mo] = key.split("/").map(Number);
+        const income = state.salaryData.filter(s => s.year === yr && s.month === mo).reduce((s, r) => s + r.net, 0);
+        const cc = processedCC.find(c => c.m === key);
+        const expense = cc ? cc.total : 0;
+        return { key, year: yr, month: mo, label: `${String(yr).slice(2)}/${pad2(mo)}`, income, expense, surplus: income - expense, hasCC: !!cc };
+      });
+      // 只用「帳單已出」的月份計算平均與儲蓄率，避免尚未出帳的月份把儲蓄率灌高
+      const billed = comparison.filter(c => c.hasCC);
+      const last6 = comparison.slice(-6);
+      const curMonths = billed.filter(c => c.year === curYear);
+      const avgCurIncome = curMonths.length ? Math.round(curMonths.reduce((s, m) => s + m.income, 0) / curMonths.length) : 0;
+      const avgCurExpense = curMonths.length ? Math.round(curMonths.reduce((s, m) => s + m.expense, 0) / curMonths.length) : 0;
+      const savingsRate = avgCurIncome ? ((avgCurIncome - avgCurExpense) / avgCurIncome * 100).toFixed(1) : "0.0";
+      const budgetUsed = totalBudget ? (totalPrevCC / totalBudget * 100).toFixed(1) : "0.0";
+
+      const aggregate = keyFn => {
+        const map = {};
+        billed.forEach(c => {
+          const k = keyFn(c);
+          if (!map[k]) map[k] = { income: 0, expense: 0, surplus: 0 };
+          map[k].income += c.income; map[k].expense += c.expense; map[k].surplus += c.surplus;
+        });
+        return Object.entries(map).map(([label, v]) => ({ label, ...v, savingsRate: v.income ? ((v.income - v.expense) / v.income * 100).toFixed(1) : "0.0" }));
+      };
+      const yearlyCf = aggregate(c => `${c.year} 年`);
+      const quarterlyCf = aggregate(c => `${c.year} Q${Math.ceil(c.month / 3)}`);
+
+      // 底薪歷程：取每年最後一筆一般月薪的本薪
+      const baseHistory = years.map(yr => {
+        const rows = state.salaryData.filter(s => s.year === yr && !s.isBonus && s.base > 0);
+        return rows.length ? { year: yr, base: rows[rows.length - 1].base } : null;
+      }).filter(Boolean);
+      const baseGrowth = baseHistory.length > 1 ? Math.round((baseHistory[baseHistory.length - 1].base / baseHistory[0].base - 1) * 100) : 0;
+      const bonusMonthsCur = [...new Set(state.salaryData.filter(s => s.year === curYear && s.isBonus).map(s => s.month))].sort((a, b) => a - b);
+
+      return { processedCC, totalBudget, totalCash, annualSalary, curYear, prevYear, totalPrevCC, totalCurCC, prevCCMonths: prevCCRows.length, avgPrevCCMonth, salaryPrev, comparison, billed, last6, curMonths, avgCurIncome, avgCurExpense, savingsRate, budgetUsed, yearlyCf, quarterlyCf, baseHistory, baseGrowth, bonusMonthsCur };
+    }
+
+    function updateChart(id, config) {
+      if (charts[id]) charts[id].destroy();
+      const ctx = document.getElementById(id);
+      if (ctx) charts[id] = new Chart(ctx, config);
+    }
+
+    function switchCfView(view) {
+      currentCfView = view;
+      const btnMonth = document.getElementById("btn-cf-month"), btnQuarter = document.getElementById("btn-cf-quarter"), btnYear = document.getElementById("btn-cf-year");
+      [btnMonth, btnQuarter, btnYear].forEach(btn => { btn.classList.remove("bg-white", "text-indigo-700", "shadow-sm"); btn.classList.add("text-slate-600"); });
+      document.getElementById(`btn-cf-${view}`).classList.add("bg-white", "text-indigo-700", "shadow-sm");
+      document.getElementById(`btn-cf-${view}`).classList.remove("text-slate-600");
+
+      document.getElementById("cf-list-month").classList.add("hidden");
+      document.getElementById("cf-list-quarter").classList.add("hidden");
+      document.getElementById("cf-list-year").classList.add("hidden");
+      document.getElementById(`cf-list-${view}`).classList.remove("hidden");
+
+      if (view === 'month') {
+        document.getElementById("cf-chart-title").innerText = "月度實領薪資 vs 信用卡消費"; document.getElementById("cf-list-title").innerText = "月度收支結餘明細"; document.getElementById("cf-list-subtitle").innerText = "排序：最新在前";
+      } else if (view === 'quarter') {
+        document.getElementById("cf-chart-title").innerText = "季度實領薪資 vs 信用卡消費"; document.getElementById("cf-list-title").innerText = "季度收支結餘回顧"; document.getElementById("cf-list-subtitle").innerText = "僅計入帳單已輸入的月份";
+      } else if (view === 'year') {
+        document.getElementById("cf-chart-title").innerText = "年度實領薪資 vs 信用卡消費"; document.getElementById("cf-list-title").innerText = "年度收支結餘回顧"; document.getElementById("cf-list-subtitle").innerText = "僅計入帳單已輸入的月份";
+      }
+      renderCashflowSection();
+    }
+
+    function renderCashflowSection() {
+      const d = getDerivedData();
+      let labels = [], incomeData = [], expenseData = [];
+      if (currentCfView === 'month') {
+        labels = d.comparison.map(c => c.label); incomeData = d.comparison.map(c => c.income); expenseData = d.comparison.map(c => c.expense);
+      } else if (currentCfView === 'quarter') {
+        labels = d.quarterlyCf.map(c => c.label); incomeData = d.quarterlyCf.map(c => c.income); expenseData = d.quarterlyCf.map(c => c.expense);
+      } else if (currentCfView === 'year') {
+        labels = d.yearlyCf.map(c => c.label); incomeData = d.yearlyCf.map(c => c.income); expenseData = d.yearlyCf.map(c => c.expense);
+      }
+
+      updateChart("cashflowChart", {
+        type: "bar",
+        data: { labels: labels, datasets: [ { label: "實領收入", data: incomeData, backgroundColor: "#3b82f6", borderRadius: 4 }, { label: "卡費支出", data: expenseData, backgroundColor: "#f87171", borderRadius: 4 } ] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top", labels: { boxWidth: 12, font: { size: 10 } } } }, scales: { y: { ticks: { callback: v => `${v/10000}萬`, font: { size: 9 } } } } }
+      });
+
+      document.getElementById("cf-list-month").innerHTML = d.comparison.map(m => m.hasCC ? `
+        <div class="p-3 rounded-xl ${m.surplus >= 0 ? "bg-emerald-50/50 border border-emerald-100" : "bg-rose-50/50 border border-rose-100"} flex justify-between items-center">
+          <div><div class="text-xs font-bold text-slate-800">${m.label} 結餘</div><div class="text-[10px] text-slate-400 mt-1">收 $${fmt(m.income)} | 支 $${fmt(m.expense)}</div></div>
+          <div class="text-right"><div class="text-xs font-extrabold ${m.surplus >= 0 ? "text-emerald-600" : "text-rose-600"}">${m.surplus >= 0 ? "+" : ""}${fmt(m.surplus)}</div></div>
+        </div>` : `
+        <div class="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex justify-between items-center">
+          <div><div class="text-xs font-bold text-slate-600">${m.label}</div><div class="text-[10px] text-slate-400 mt-1">收 $${fmt(m.income)} | 卡費帳單尚未輸入</div></div>
+          <button onclick="openCreditFor('${m.key}')" class="text-[10px] font-bold text-indigo-600 bg-white border border-indigo-200 px-2.5 py-1 rounded-full">輸入帳單</button>
+        </div>`).reverse().join("");
+
+      document.getElementById("cf-list-quarter").innerHTML = d.quarterlyCf.map(q => `
+        <div class="p-3 rounded-xl ${q.surplus >= 0 ? "bg-emerald-50/50 border border-emerald-100" : "bg-rose-50/50 border border-rose-100"} flex justify-between items-center">
+          <div><div class="text-xs font-bold text-slate-800">${q.label} 結餘</div><div class="text-[10px] text-slate-400 mt-1">收 $${fmt(q.income)} | 支 $${fmt(q.expense)}</div></div>
+          <div class="text-right"><div class="text-xs font-extrabold ${q.surplus >= 0 ? "text-emerald-600" : "text-rose-600"}">${q.surplus >= 0 ? "+" : ""}${fmt(q.surplus)}</div><div class="text-[9px] text-slate-400 mt-1">儲蓄率: ${q.savingsRate}%</div></div>
+        </div>`).reverse().join("");
+
+      document.getElementById("cf-list-year").innerHTML = d.yearlyCf.map(y => `
+        <div class="p-3 rounded-xl ${y.surplus >= 0 ? "bg-emerald-50/50 border border-emerald-100" : "bg-rose-50/50 border border-rose-100"} flex justify-between items-center">
+          <div><div class="text-xs font-bold text-slate-800">${y.label} 結餘</div><div class="text-[10px] text-slate-400 mt-1">收 $${fmt(y.income)} | 支 $${fmt(y.expense)}</div></div>
+          <div class="text-right"><div class="text-xs font-extrabold ${y.surplus >= 0 ? "text-emerald-600" : "text-rose-600"}">${y.surplus >= 0 ? "+" : ""}${fmt(y.surplus)}</div><div class="text-[9px] text-slate-400 mt-1">儲蓄率: ${y.savingsRate}%</div></div>
+        </div>`).reverse().join("");
+    }
+
+    function switchInsYear(yr) {
+      currentInsYear = yr;
+      renderAll();
+    }
+
+    // ── 渲染所有頁面 ──
+    function renderAll() {
+      const d = getDerivedData();
+
+      // Dashboard
+      refreshCardLabels();
+      renderNotice();
+      document.getElementById("dash-assets").innerText = `TWD ${fmt(d.totalCash)}`;
+      document.getElementById("dash-asof").innerText = state.meta?.balanceUpdatedAt ? `(${toRoc(state.meta.balanceUpdatedAt)})` : "";
+      const yy = String(d.curYear).slice(2);
+      document.getElementById("dash-lbl-inc").innerText = `${yy}年 月均收入`;
+      document.getElementById("dash-lbl-exp").innerText = `${yy}年 月均支出`;
+      document.getElementById("dash-lbl-rate").innerText = `儲蓄率（${d.curMonths.length} 個月）`;
+      document.getElementById("dash-avg-income").innerText = `$${fmt(d.avgCurIncome)}`;
+      document.getElementById("dash-avg-expense").innerText = `$${fmt(d.avgCurExpense)}`;
+      document.getElementById("dash-savings-rate").innerText = `${d.savingsRate}%`;
+
+      const budgetDiff = d.totalBudget - d.totalPrevCC;
+      const used = parseFloat(d.budgetUsed);
+      const firstBase = d.baseHistory[0], lastBase = d.baseHistory[d.baseHistory.length - 1];
+      document.getElementById("dash-kpi").innerHTML = [
+        {bg:"bg-blue-50 border-blue-100", text:"text-blue-700", icon:"💼", lbl:`${d.prevYear} 年薪資`, val:wan(d.salaryPrev), sub:"含全部獎金實發", go:"salary"},
+        {bg:"bg-violet-50 border-violet-100", text:"text-violet-700", icon:"💳", lbl:`${d.prevYear} 年消費`, val:wan(d.totalPrevCC), sub:`${d.prevCCMonths} 個月信用卡帳單`, go:"credit"},
+        budgetDiff >= 0
+          ? {bg:"bg-emerald-50 border-emerald-100", text:"text-emerald-700", icon:"📈", lbl:`${d.prevYear} 預算盈餘`, val:wan(budgetDiff), sub: d.totalBudget ? `節省 ${(100 - used).toFixed(0)}% 的總預算` : "尚未設定預算", go:"budget"}
+          : {bg:"bg-rose-50 border-rose-100", text:"text-rose-700", icon:"📉", lbl:`${d.prevYear} 預算超支`, val:wan(-budgetDiff), sub:`超出總預算 ${(used - 100).toFixed(0)}%`, go:"budget"},
+        {bg:"bg-amber-50 border-amber-100", text:"text-amber-700", icon:"🏦", lbl:"底薪總成長率", val:`+${d.baseGrowth}%`, sub: firstBase ? `${firstBase.year} 至 ${lastBase.year} 年累積` : "尚無資料", go:"salary"}
+      ].map(k => `<button onclick="goSec('${k.go}')" class="text-left p-4 rounded-2xl border ${k.bg} active:scale-[0.98] transition-transform"><div class="text-xs text-slate-500 font-medium">${k.icon} ${k.lbl}</div><div class="text-lg font-bold mt-1 ${k.text}">${k.val}</div><div class="text-[10px] text-slate-400 mt-0.5">${k.sub}</div></button>`).join("");
+
+      document.getElementById("dash-health").innerHTML = [
+        {key:"savings", label:`儲蓄率（${d.curYear} 均）`, val:d.savingsRate+"%", raw:parseFloat(d.savingsRate), thresholds:[20,10], desc:`已出帳 ${d.curMonths.length} 個月：實領薪資扣除卡費的比例`, higherBetter:true},
+        {key:"budget", label:`預算執行率（${d.prevYear}）`, val:d.budgetUsed+"%", raw:used, thresholds:[80,100], desc:`預算 $${(d.totalBudget/10000).toFixed(0)}萬 vs 消費 $${(d.totalPrevCC/10000).toFixed(0)}萬`, higherBetter:false},
+        {key:"surplus", label:`月均收支結餘（${d.curYear}）`, val:`$${fmt(d.avgCurIncome-d.avgCurExpense)}`, raw:d.avgCurIncome-d.avgCurExpense, thresholds:[20000,5000], desc:"月薪資收入減去信用卡帳單", higherBetter:true},
+      ].map(m => {
+        const cls = m.higherBetter ? (m.raw >= m.thresholds[0] ? "good" : m.raw >= m.thresholds[1] ? "warn" : "bad") : (m.raw <= m.thresholds[0] ? "good" : m.raw <= m.thresholds[1] ? "warn" : "bad");
+        const badgeColor = cls === "good" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : cls === "warn" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200";
+        const icon = cls === "good" ? "🟢 良好" : cls === "warn" ? "🟡 留意" : "🔴 偏離";
+        return `
+          <button onclick="openHealthDetail('${m.key}')" class="w-full text-left p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex justify-between items-start hover:bg-slate-100/70 active:scale-[0.98] transition-all">
+            <div class="space-y-1"><div class="text-xs font-semibold text-slate-800">${m.label}</div><div class="text-[10px] text-slate-400">${m.desc}</div></div>
+            <div class="text-right flex flex-col items-end shrink-0 pl-2"><span class="inline-block text-[10px] px-2 py-0.5 rounded-full border ${badgeColor} font-bold">${icon} ${m.val}</span><span class="text-[9px] text-indigo-500 font-medium mt-1">查看詳情</span></div>
+          </button>`;
+      }).join("");
+
+      updateChart("dashChart", {
+        type: "bar",
+        data: { labels: d.last6.map(c => c.label), datasets: [ { label: "實領收入", data: d.last6.map(c => c.income), backgroundColor: "#3b82f6", borderRadius: 4, stack: "a" }, { label: "信用卡支出", data: d.last6.map(c => c.expense), backgroundColor: "#f87171", borderRadius: 4, stack: "b" } ] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top", labels: { boxWidth: 12, font: { size: 10 } } } }, scales: { y: { ticks: { callback: v => `${v/10000}萬`, font: { size: 9 } } } } }
+      });
+
+      const activeBanks = state.bankAccounts.filter(b => b.accounts.reduce((s,a) => s+a.bal, 0) > 0);
+      updateChart("bankChart", {
+        type: "doughnut",
+        data: { labels: activeBanks.map(b => b.bank), datasets: [{ data: activeBanks.map(b => b.accounts.reduce((s,a) => s+a.bal, 0)), backgroundColor: activeBanks.map(b => b.color), borderWidth: 2, borderColor: "#fff" }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 8, padding: 8, font: { size: 10 }, generateLabels: function(chart) {
+              const data = chart.data;
+              if (data.labels.length && data.datasets.length) {
+                return data.labels.map(function(label, i) {
+                  const value = data.datasets[0].data[i]; const percent = d.totalCash ? ((value / d.totalCash) * 100).toFixed(1) : 0;
+                  return { text: `${label}: $${fmt(value)} (${percent}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: '#fff', lineWidth: 2, hidden: isNaN(value) || chart.getDatasetMeta(0).data[i].hidden, index: i };
+                });
+              } return [];
+            } } },
+            tooltip: { callbacks: { label: function(context) { const val = context.raw; const pct = d.totalCash ? ((val / d.totalCash) * 100).toFixed(1) : 0; return ` $${fmt(val)} (${pct}%)`; } } }
+          }
+        },
+        plugins: [{
+          id: 'centerText',
+          beforeDraw: function(chart) {
+            const ctx = chart.ctx; const area = chart.chartArea; if (!area) return;
+            ctx.save(); const text = "總活存"; const valText = "$" + fmt(d.totalCash);
+            const centerX = (area.left + area.right) / 2; const centerY = (area.top + area.bottom) / 2;
+            if (area.right - area.left > 100) {
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.font = 'bold 9px ' + FONT_STACK; ctx.fillStyle = '#64748b'; ctx.fillText(text, centerX, centerY - 7);
+              ctx.font = 'bold 11px ' + FONT_STACK; ctx.fillStyle = '#1e293b'; ctx.fillText(valText, centerX, centerY + 7);
+            } ctx.restore();
+          }
+        }]
+      });
+
+      // Salary
+      document.getElementById("salary-stat-grid").innerHTML = d.annualSalary.map(yr => `
+        <div class="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm"><div class="text-xs text-slate-400 font-medium">${yr.year} 年${yr.months < 12 ? ` (${yr.months} 個月)` : ""}</div><div class="text-base font-bold text-slate-800 mt-1">$${fmt(yr.total)}</div><div class="text-[10px] text-slate-400 mt-1 space-y-0.5"><div>常規月薪: $${fmt(yr.regular)}</div>${yr.bonus ? `<div class="text-amber-600 font-medium">實發獎金: $${fmt(yr.bonus)}</div>` : ""}</div></div>
+      `).join("");
+
+      updateChart("salaryChart", {
+        type: "bar",
+        data: {
+          labels: d.annualSalary.filter(y => y.months > 1).map(y => y.year),
+          datasets: [
+            { label: "固定實領月薪", data: d.annualSalary.filter(y => y.months > 1).map(y => y.regular), backgroundColor: "#3b82f6", borderRadius: 4, stack: "a" },
+            { label: "實領獎金", data: d.annualSalary.filter(y => y.months > 1).map(y => y.bonus), backgroundColor: "#f59e0b", borderRadius: 4, stack: "a" }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top", labels: { boxWidth: 12, font: { size: 10 } } } }, scales: { y: { ticks: { callback: v => `${v/10000}萬`, font: { size: 9 } } } } }
+      });
+
+      document.getElementById("base-growth").innerHTML = d.baseHistory.map((item, i, arr) => {
+        const prev = arr[i - 1]; const pct = prev ? (((item.base - prev.base) / prev.base) * 100).toFixed(1) : null;
+        return `<div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"><span class="text-xs font-semibold text-slate-700">${item.year} 年底薪</span><div class="flex items-center gap-2">${pct ? `<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">▲ ${pct}%</span>` : ""}<strong class="text-xs text-slate-800">$${fmt(item.base)}</strong></div></div>`;
+      }).join("");
+
+      // Cashflow
+      renderCashflowSection();
+
+      // Credit
+      document.getElementById("credit-stats").innerHTML = `
+        <div class="p-3 rounded-xl bg-violet-50 border border-violet-100 text-center"><div class="text-[10px] text-violet-500 font-medium">${d.prevYear} 全年卡費</div><div class="text-sm font-bold text-violet-700 mt-0.5">${wan(d.totalPrevCC)}</div></div>
+        <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-center"><div class="text-[10px] text-indigo-500 font-medium">${d.prevYear} 月均卡費</div><div class="text-sm font-bold text-indigo-700 mt-0.5">$${fmt(d.avgPrevCCMonth)}</div></div>
+        <div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-center"><div class="text-[10px] text-blue-500 font-medium">${d.curYear} 累計消費</div><div class="text-sm font-bold text-blue-700 mt-0.5">${wan(d.totalCurCC)}</div></div>
+      `;
+
+      updateChart("creditChart", {
+        type: "bar",
+        data: { labels: d.processedCC.map(c => c.m), datasets: [{ label: "卡費支出", data: d.processedCC.map(c => c.total), backgroundColor: d.processedCC.map(c => c.m.startsWith(d.curYear + "/") ? "#6366f1" : "#c4b5fd"), borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => `${v/10000}萬`, font: { size: 9 } } } } }
+      });
+
+      document.getElementById("credit-list").innerHTML = d.processedCC.map(m => {
+        const subItems = ccKeys.map((k, i) => m[k] > 0 ? `<span>${ccLabels[i]}: $${fmt(m[k])}</span>` : "").filter(Boolean).join(" · ");
+        return `<div onclick="editCreditBill('${m.m}')" class="p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 hover:border-indigo-200 cursor-pointer active:scale-[0.98] transition-all group"><div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">${m.m}</span><strong class="text-xs text-violet-700">$${fmt(m.total)}</strong></div><div class="text-[9px] text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">${subItems}</div></div>`;
+      }).reverse().join("") || `<div class="py-6 text-center text-xs text-slate-500">還沒有信用卡帳單，點右上角「快速記帳」或到明細頁新增。</div>`;
+
+      // Budget
+      const diff = d.totalBudget - d.totalPrevCC;
+      const pos = diff >= 0;
+      document.getElementById("budget-top").innerHTML = `
+        <div class="p-4 rounded-2xl bg-blue-50 border border-blue-100"><div class="text-[10px] text-blue-500 font-medium">${d.prevYear} 全年預算</div><div class="text-base font-bold text-blue-700 mt-1">${wan(d.totalBudget)}</div></div>
+        <div class="p-4 rounded-2xl ${pos ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}"><div class="text-[10px] ${pos ? "text-emerald-600" : "text-rose-600"} font-medium">${d.prevYear} 卡費支出</div><div class="text-base font-bold ${pos ? "text-emerald-700" : "text-rose-700"} mt-1">${wan(d.totalPrevCC)}</div></div>
+      `;
+
+      document.getElementById("budget-result").innerHTML = `
+        <div class="p-4 rounded-2xl border ${pos ? "bg-emerald-50/40 border-emerald-200 text-emerald-800" : "bg-rose-50/40 border-rose-200 text-rose-800"}"><div class="text-xs text-slate-500 font-semibold">${d.prevYear} 年度預算執行回顧</div><div class="text-2xl font-extrabold mt-1.5">${pos ? "預算盈餘" : "預算超支"} $${fmt(Math.abs(diff))}</div><div class="text-[10px] text-slate-400 mt-1">${d.totalBudget ? `約佔總預算額度的 ${(Math.abs(diff / d.totalBudget) * 100).toFixed(1)}%` : "尚未設定預算額度"}</div></div>
+      `;
+
+      document.getElementById("budget-bars").innerHTML = Object.entries(state.budgetData).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => {
+        const pct = d.totalBudget ? (amt / d.totalBudget * 100).toFixed(1) : "0.0";
+        return `<div><div class="flex justify-between items-center text-xs mb-1"><span class="font-bold text-slate-700">${esc(cat)}</span><span class="text-slate-400">$${fmt(amt)} (${pct}%)</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div></div></div>`;
+      }).join("");
+
+      // ── 保險多年度檢視 ──
+      const insYears = [...new Set([...state.insurances.map(i => i.year || 2025), d.curYear])].sort((a, b) => a - b);
+      document.getElementById("ins-year-tabs").innerHTML = insYears.map(yr => `
+        <button class="shrink-0 px-4 py-2 text-xs font-semibold rounded-full transition-all ${currentInsYear === yr ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600'}" onclick="switchInsYear(${yr})">${yr} 年度</button>
+      `).join("") + `<button class="shrink-0 px-4 py-2 text-xs font-semibold rounded-full transition-all ${currentInsYear === 'compare' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600'}" onclick="switchInsYear('compare')">📊 跨年比較</button>`;
+
+      if (currentInsYear === 'compare') {
+        document.getElementById("ins-yearly-view").classList.add("hidden");
+        document.getElementById("ins-compare-view").classList.remove("hidden");
+
+        const yearlyTotals = insYears.map(yr => ({ year: yr, total: state.insurances.filter(i => (i.year || 2025) === yr).reduce((sum, i) => sum + i.annual, 0) }));
+
+        updateChart("insCompareChart", {
+          type: "bar",
+          data: { labels: yearlyTotals.map(y => `${y.year}年`), datasets: [{ label: "年度總保費", data: yearlyTotals.map(y => y.total), backgroundColor: "#f59e0b", borderRadius: 4 }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => `${v/10000}萬`, font: { size: 9 } } } } }
+        });
+
+        document.getElementById("ins-compare-details").innerHTML = yearlyTotals.slice().reverse().map((curr, idx, arr) => {
+          const prev = arr[idx + 1];
+          let diffHtml = '<span class="text-slate-400 text-[10px]">無前年資料 / 基準年</span>';
+          if (prev) {
+            const diff = curr.total - prev.total;
+            const pct = prev.total ? (Math.abs(diff) / prev.total * 100).toFixed(1) : 0;
+            if (diff > 0) diffHtml = `<span class="text-rose-600 font-bold text-xs bg-rose-50 px-2 py-0.5 rounded-full">▲ +$${fmt(diff)} (+${pct}%)</span>`;
+            else if (diff < 0) diffHtml = `<span class="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full">▼ -$${fmt(Math.abs(diff))} (${pct}%)</span>`;
+            else diffHtml = `<span class="text-slate-400 font-bold text-xs bg-slate-50 px-2 py-0.5 rounded-full">持平</span>`;
+          }
+          return `<div class="flex justify-between items-center p-3 border-b border-slate-100 last:border-0"><div><div class="font-bold text-slate-800">${curr.year} 年度</div><div class="text-[10px] text-slate-400 mt-0.5">總保費 $${fmt(curr.total)}</div></div><div class="text-right">${diffHtml}</div></div>`;
+        }).join("");
+      } else {
+        document.getElementById("ins-yearly-view").classList.remove("hidden");
+        document.getElementById("ins-compare-view").classList.add("hidden");
+
+        const currentInsurances = state.insurances.map((ins, origIdx) => ({ ...ins, origIdx, year: ins.year || 2025 })).filter(i => i.year === currentInsYear);
+        const totalInsCurrentYear = currentInsurances.reduce((s, i) => s + i.annual, 0);
+        document.getElementById("ins-list-title-year").innerText = `${currentInsYear} 年度`;
+        document.getElementById("ins-timeline-title-year").innerText = `${currentInsYear} 年度`;
+        const cardSum = {}; currentInsurances.forEach(i => { cardSum[i.card] = (cardSum[i.card] || 0) + i.annual; });
+        const mainCard = Object.entries(cardSum).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+        document.getElementById("ins-hero").innerHTML = `
+          <div class="bg-gradient-to-br from-amber-800 via-amber-900 to-amber-950 rounded-3xl p-5 text-white shadow-lg">
+            <div class="text-xs text-amber-200/80 font-medium">🛡️ ${currentInsYear} 年度保險總年繳保費</div>
+            <div class="text-2xl font-black mt-2">$${fmt(totalInsCurrentYear)}</div>
+            <div class="grid grid-cols-3 gap-1.5 mt-5 pt-4 border-t border-white/10 text-[10px]">
+              <div><div class="text-amber-300">月均預攤</div><div class="font-bold text-xs mt-0.5">$${fmt(Math.round(totalInsCurrentYear/12))}</div></div>
+              <div><div class="text-amber-300">付款卡片</div><div class="font-bold text-xs mt-0.5">${mainCard ? esc(mainCard) + "卡" : "—"}</div></div>
+              <div><div class="text-amber-300">保單數量</div><div class="font-bold text-xs mt-0.5">${currentInsurances.length} 份</div></div>
+            </div>
+          </div>
+        `;
+
+        const insColors = ["bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"];
+        document.getElementById("ins-list").innerHTML = currentInsurances.map((ins, i) => {
+          const pct = totalInsCurrentYear ? (ins.annual / totalInsCurrentYear * 100).toFixed(1) : 0;
+          return `<div class="py-3 flex justify-between items-center group"><div class="flex-1 mr-4"><div class="flex justify-between items-start mb-1.5"><div><div class="text-xs font-bold text-slate-800">${esc(ins.name)}</div><div class="text-[10px] text-slate-400 mt-0.5">被保對象：${esc(ins.cover)}</div><div class="text-[10px] text-slate-400">每年 ${ins.month}/${ins.day} 扣款（${esc(ins.card)}卡・${esc(ins.note)}）</div></div><div class="text-right"><div class="text-xs font-bold text-slate-800">$${fmt(ins.annual)}</div><div class="text-[9px] text-slate-400">${pct}%</div></div></div><div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden"><div class="${insColors[i % insColors.length]} h-full rounded-full" style="width: ${pct}%"></div></div></div><button onclick="openInsModal(${ins.origIdx})" class="text-[11px] font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100/80 px-2.5 py-1.5 rounded-xl border border-amber-200 transition-all flex items-center gap-1 shrink-0">✏️ 編輯</button></div>`;
+        }).join("") || (() => {
+          const src = insYears.filter(y => y < currentInsYear && state.insurances.some(i => (i.year || 2025) === y)).pop();
+          return `<div class="py-6 text-center space-y-3"><p class="text-xs text-slate-500">${currentInsYear} 年度還沒有保單紀錄。</p>${src ? `<button onclick="copyInsFromYear(${src}, ${currentInsYear})" class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-full">沿用 ${src} 年度的 ${state.insurances.filter(i => (i.year || 2025) === src).length} 份保單</button>` : ""}</div>`;
+        })();
+
+        const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+        document.getElementById("ins-timeline").innerHTML = months.map((m, mi) => {
+          const hits = currentInsurances.filter(ins => ins.month === mi + 1);
+          const hasItem = hits.length > 0;
+          return `<div class="flex justify-between items-center p-2.5 rounded-xl text-xs ${hasItem ? "bg-amber-50/60 border border-amber-100" : "bg-slate-50 border border-slate-100/50"}"><span class="font-bold ${hasItem ? "text-amber-800" : "text-slate-400"}">${m}</span><div class="text-right">${hasItem ? `<span class="font-bold text-amber-700">$${fmt(hits.reduce((s, h) => s + h.annual, 0))}</span><div class="text-[9px] text-amber-600">${hits.map(h => esc(h.name)).join("、")}</div>` : `<span class="text-slate-300">—</span>`}</div></div>`;
+        }).join("");
+      }
+
+      // Bank
+      document.getElementById("bank-hero").innerHTML = `
+        <div class="bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 rounded-3xl p-5 text-white shadow-lg"><div class="text-xs text-emerald-200/80 font-medium">🏦 當前活期存款累計餘額</div><div class="text-2xl font-black mt-2">TWD ${fmt(d.totalCash)}</div><div class="text-[10px] text-emerald-300/80 mt-1">${state.bankAccounts.reduce((s, b) => s + b.accounts.length, 0)} 個活存帳戶，分散於 ${state.bankAccounts.length} 家銀行${state.meta?.balanceUpdatedAt ? `<br>餘額更新於 ${toRoc(state.meta.balanceUpdatedAt)}` : ""}</div></div>
+      `;
+
+      document.getElementById("bank-list").innerHTML = state.bankAccounts.map((b, bi) => {
+        const bankTotal = b.accounts.reduce((s, a) => s + a.bal, 0);
+        const pct = d.totalCash ? (bankTotal / d.totalCash * 100).toFixed(1) : 0;
+        const accountsHtml = b.accounts.map((a, ai) => `<div onclick="openBankModal(${bi}, ${ai})" class="flex justify-between items-center py-2.5 border-t border-slate-100 hover:bg-slate-50/50 px-2 rounded-lg cursor-pointer transition-colors"><div><div class="text-xs font-semibold text-slate-700">${a.name}</div><div class="text-[10px] text-slate-400">${a.no}</div></div><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-slate-800">$${fmt(a.bal)}</span><svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></div></div>`).join("");
+        return `<div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100"><div class="flex justify-between items-center mb-2.5"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background: ${b.color}"></span><span class="text-xs font-bold text-slate-800">${b.bank}</span></div><div class="text-right"><span class="text-xs font-bold text-slate-800">$${fmt(bankTotal)}</span><span class="text-[9px] text-slate-400 ml-1">(${pct}%)</span></div></div><div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden mb-3"><div class="h-full rounded-full" style="background: ${b.color}; width: ${pct}%"></div></div><div class="space-y-1">${accountsHtml}</div></div>`;
+      }).join("") || `<div class="bg-white rounded-2xl p-6 border border-slate-100 text-center text-xs text-slate-500 leading-relaxed">還沒有存款帳戶資料。<br>銀行帳戶會隨備份檔一起還原，請到 ⚙️ 設定還原備份。</div>`;
+
+      renderTables();
+    }
+
+    // ── 操作邏輯與彈窗 ──
+    function renderTables() {
+      let salRows = state.salaryData.map((r, i) => `<tr onclick="editSalary(${i})" class="border-b border-slate-50 hover:bg-slate-50 active:bg-slate-100 text-xs cursor-pointer"><td class="p-2.5"><div class="font-bold text-slate-700">${esc(r.id)}${r.isBonus ? ' <span class="text-[9px] text-amber-600 bg-amber-50 px-1 rounded">獎金</span>' : ""}</div>${r.bonusNote ? `<div class="text-[9px] text-slate-400 mt-0.5 min-w-[120px]">${esc(r.bonusNote)}</div>` : ""}</td><td class="p-2.5 text-right font-medium text-slate-600">${r.base ? fmt(r.base) : "-"}</td><td class="p-2.5 text-right text-slate-600">${fmt(r.gross)}</td><td class="p-2.5 text-right text-slate-400">${fmt(r.ded)}</td><td class="p-2.5 text-right font-bold text-blue-600">$${fmt(r.net)}</td></tr>`).reverse().join("");
+      const salTotal = { gross: state.salaryData.reduce((s, r) => s + r.gross, 0), ded: state.salaryData.reduce((s, r) => s + r.ded, 0), net: state.salaryData.reduce((s, r) => s + r.net, 0) };
+      document.getElementById("tbl-salary").innerHTML = `<div class="overflow-x-auto"><table class="w-full min-w-[400px] text-left border-collapse"><thead><tr class="border-b-2 border-slate-100 text-[10px] font-bold text-slate-400"><th class="p-2 pb-1.5">薪資單號</th><th class="p-2 pb-1.5 text-right">本薪</th><th class="p-2 pb-1.5 text-right">應發總額</th><th class="p-2 pb-1.5 text-right">勞健退扣</th><th class="p-2 pb-1.5 text-right text-blue-600">實發淨額</th></tr></thead><tbody>${salRows}<tr class="bg-blue-50/40 font-bold text-xs text-slate-800"><td class="p-3.5">累積合計</td><td class="p-3.5 text-right">—</td><td class="p-3.5 text-right">${fmt(salTotal.gross)}</td><td class="p-3.5 text-right">${fmt(salTotal.ded)}</td><td class="p-3.5 text-right text-blue-600">$${fmt(salTotal.net)}</td></tr></tbody></table></div>`;
+
+      let ccRows = state.ccRaw.map((r, i) => { const total = ccKeys.reduce((s, k) => s + (r[k] || 0), 0); return `<tr onclick="editCreditBill('${r.m}')" class="border-b border-slate-50 hover:bg-slate-50 active:bg-slate-100 text-xs cursor-pointer"><td class="p-2.5 font-bold text-slate-700">${r.m}</td>${ccKeys.map(k => `<td class="p-2 text-right">${r[k] ? fmt(r[k]) : "-"}</td>`).join("")}<td class="p-2.5 text-right font-bold text-violet-600">$${fmt(total)}</td></tr>`; }).reverse().join("");
+      const ccTotals = ccKeys.map(k => state.ccRaw.reduce((s, r) => s + (r[k] || 0), 0));
+      const grandTotalCC = ccTotals.reduce((s, v) => s + v, 0);
+      document.getElementById("tbl-cc").innerHTML = `<div class="grid grid-cols-2 gap-2 mb-3"><button onclick="openAddModal(); document.getElementById('modal-type').value='credit'; onModalTypeChange();" class="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl py-2">＋ 依月份輸入</button><button onclick="openCardBatch()" class="text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl py-2">💳 依卡片批次輸入</button></div><div class="overflow-x-auto"><table class="w-full min-w-[500px] text-left border-collapse"><thead><tr class="border-b-2 border-slate-100 text-[10px] font-bold text-slate-400"><th class="p-2 pb-1.5">月份</th>${ccLabels.map((l, ki) => `<th class="p-2 text-right"><button onclick="openCardBatch('${ccKeys[ki]}')" class="underline decoration-dotted underline-offset-2 hover:text-violet-600">${l}</button></th>`).join("")}<th class="p-2 pb-1.5 text-right text-violet-600">合計</th></tr></thead><tbody>${ccRows}<tr class="bg-violet-50/40 font-bold text-xs text-slate-800"><td class="p-3.5">累積總計</td>${ccTotals.map(t => `<td class="p-3.5 text-right">${fmt(t)}</td>`).join("")}<td class="p-3.5 text-right text-violet-600">$${fmt(grandTotalCC)}</td></tr></tbody></table></div>`;
+    }
+
+    function goSec(name) {
+      const btn = [...document.querySelectorAll(".nav-btn")].find(b => b.getAttribute("onclick").includes(`'${name}'`));
+      if (btn) switchSec(name, btn);
+    }
+    function switchSec(name, btn) {
+      document.querySelectorAll(".section").forEach(s => s.classList.add("hidden"));
+      document.querySelectorAll(".nav-btn").forEach(b => { b.classList.remove("text-blue-600", "active"); b.classList.add("text-slate-400"); });
+      document.getElementById("sec-" + name).classList.remove("hidden");
+      btn.classList.add("text-blue-600", "active"); btn.classList.remove("text-slate-400");
+      document.querySelectorAll(".nav-btn").forEach(b => b.removeAttribute("aria-current"));
+      btn.setAttribute("aria-current", "page");
+      window.scrollTo({ top: 0 });
+      // 隱藏時建立的圖表尺寸可能為 0，切換後重新計算
+      Object.values(charts).forEach(c => c.resize());
+    }
+
+    function switchTbl(t, btn) {
+      document.getElementById("tbl-salary").style.display = t === "salary" ? "block" : "none";
+      document.getElementById("tbl-cc").style.display = t === "cc" ? "block" : "none";
+      document.querySelectorAll(".active-tab-btn").forEach(b => { b.classList.remove("bg-white", "text-blue-600", "shadow-sm"); b.classList.add("text-slate-600"); });
+      btn.classList.add("bg-white", "text-blue-600", "shadow-sm"); btn.classList.remove("text-slate-600");
+    }
+
+    let addMode = { salIdx: null, ccMonth: null };
+
+    // 兩段式刪除：第一次按下變成確認文字，3 秒內再按一次才刪除
+    function armDelete(btn, action) {
+      if (btn.dataset.armed === "1") { btn.dataset.armed = ""; btn.textContent = "刪除"; action(); return; }
+      btn.dataset.armed = "1"; btn.textContent = "再按一次確認";
+      clearTimeout(btn._t);
+      btn._t = setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "刪除"; }, 3000);
+    }
+    function resetDeleteBtn(id, show) {
+      const b = document.getElementById(id);
+      b.dataset.armed = ""; b.textContent = "刪除"; clearTimeout(b._t);
+      b.classList.toggle("hidden", !show);
+    }
+
+    function nextMonth(y, m) { return m >= 12 ? [y + 1, 1] : [y, m + 1]; }
+
+    function openAddModal() {
+      addMode = { salIdx: null, ccMonth: null };
+      document.getElementById("add-modal-title").innerText = "🆕 快速新增紀錄";
+      document.getElementById("modal-type").disabled = false;
+      resetDeleteBtn("add-delete-btn", false);
+      document.getElementById("add-copy-btn").classList.add("hidden");
+      resetSaveBtn();
+      document.getElementById("modal-type").value = "salary"; onModalTypeChange();
+
+      // 依最新一筆資料帶入預設值，省去重複輸入
+      const lastReg = state.salaryData.filter(s => !s.isBonus).slice(-1)[0];
+      if (!lastReg) {
+        const t = new Date();
+        document.getElementById("sal-year").value = t.getFullYear();
+        document.getElementById("sal-month").value = t.getMonth() + 1;
+      }
+      if (lastReg) {
+        const [ny, nm] = nextMonth(lastReg.year, lastReg.month);
+        document.getElementById("sal-year").value = ny;
+        document.getElementById("sal-month").value = nm;
+        document.getElementById("sal-base").value = lastReg.base;
+        document.getElementById("sal-gross").value = lastReg.gross;
+        document.getElementById("sal-ded").value = lastReg.ded;
+      }
+      document.getElementById("sal-isbonus").value = "false";
+      document.getElementById("sal-note").value = "";
+
+      const lastCC = state.ccRaw.slice(-1)[0];
+      if (lastCC) { const [y, m] = lastCC.m.split("/").map(Number); const [ny, nm] = nextMonth(y, m); document.getElementById("cc-month-label").value = ymKey(ny, nm); }
+      ["cc-taishin", "cc-cardA", "cc-cardB", "cc-ctbc", "cc-megabank", "cc-esun"].forEach(id => document.getElementById(id).value = 0);
+
+      updateAddPreview();
+      document.getElementById("add-modal").classList.remove("hidden");
+    }
+    function closeAddModal() { document.getElementById("add-modal").classList.add("hidden"); }
+    function onModalTypeChange() {
+      const type = document.getElementById("modal-type").value;
+      document.getElementById("modal-salary-fields").classList.toggle("hidden", type !== "salary");
+      document.getElementById("modal-credit-fields").classList.toggle("hidden", type === "salary");
+      updateAddPreview();
+    }
+    function updateAddPreview() {
+      const v = id => parseInt(document.getElementById(id).value) || 0;
+      document.getElementById("sal-net-preview").innerText = `$${fmt(v("sal-gross") - v("sal-ded"))}`;
+      document.getElementById("cc-total-preview").innerText = `$${fmt(["cc-taishin", "cc-cardA", "cc-cardB", "cc-ctbc", "cc-megabank", "cc-esun"].reduce((s, id) => s + v(id), 0))}`;
+    }
+
+    function uniqueSalaryId(base, excludeIdx) {
+      let id = base, n = 2;
+      while (state.salaryData.some((s, i) => i !== excludeIdx && s.id === id)) id = `${base}-${n++}`;
+      return id;
+    }
+
+    function saveRecord() {
+      const type = document.getElementById("modal-type").value;
+      if (type === "salary") {
+        const num = id => parseInt(document.getElementById(id).value);
+        const yr = num("sal-year"), mo = num("sal-month"), gross = num("sal-gross"), ded = num("sal-ded");
+        const base = num("sal-base") || 0;
+        if (!(yr >= 2000 && yr <= 2100)) return showToast("請輸入正確的西元年，例如 2026", "error");
+        if (!(mo >= 1 && mo <= 12)) return showToast("月份請輸入 1 到 12", "error");
+        if (!Number.isFinite(gross) || gross <= 0) return showToast("請輸入應發總額", "error");
+        if (!Number.isFinite(ded) || ded < 0) return showToast("應扣金額不可為負數", "error");
+        const isBonus = document.getElementById("sal-isbonus").value === "true";
+        const note = document.getElementById("sal-note").value.trim();
+        const idx = addMode.salIdx;
+        const rec = { id: uniqueSalaryId(`${yr}${pad2(mo)}${isBonus ? "B" : ""}`, idx), year: yr, month: mo, base: isBonus ? 0 : base, bonusNote: note, gross, ded, net: gross - ded, isBonus };
+        if (idx !== null) {
+          const old = state.salaryData[idx];
+          // 年月與性質沒變就保留原本單號
+          if (old.year === yr && old.month === mo && old.isBonus === isBonus) rec.id = old.id;
+          state.salaryData[idx] = rec;
+        } else state.salaryData.push(rec);
+      } else {
+        const raw = document.getElementById("cc-month-label").value.trim();
+        const mt = raw.match(/^(\d{4})\s*[\/\-.年]\s*(\d{1,2})\s*月?$/);
+        if (!mt || +mt[2] < 1 || +mt[2] > 12) return showToast("月份格式請用 YYYY/MM，例如 2026/07", "error");
+        const monthLabel = ymKey(+mt[1], +mt[2]);
+        const v = id => parseInt(document.getElementById(id).value) || 0;
+        const newRecord = { m: monthLabel, 台新: v("cc-taishin"), cardA: v("cc-cardA"), cardB: v("cc-cardB"), 中信: v("cc-ctbc"), 兆豐: v("cc-megabank"), 玉山: v("cc-esun") };
+        const saveBtn = document.getElementById("add-save-btn");
+        if (monthLabel !== addMode.ccMonth && state.ccRaw.some(c => c.m === monthLabel) && saveBtn.dataset.overwrite !== monthLabel) {
+          saveBtn.dataset.overwrite = monthLabel;
+          saveBtn.textContent = `${monthLabel} 已有帳單，再按一次覆蓋`;
+          saveBtn.classList.replace("bg-indigo-600", "bg-rose-600");
+          return;
+        }
+        if (addMode.ccMonth && addMode.ccMonth !== monthLabel) state.ccRaw = state.ccRaw.filter(c => c.m !== addMode.ccMonth);
+        const index = state.ccRaw.findIndex(c => c.m === monthLabel);
+        if (index !== -1) state.ccRaw[index] = newRecord; else state.ccRaw.push(newRecord);
+      }
+      const editing = addMode.salIdx !== null || addMode.ccMonth;
+      sortData(); closeAddModal(); autoSave(); renderAll();
+      showToast(editing ? "紀錄已更新" : "紀錄已新增");
+    }
+
+    function resetSaveBtn() {
+      const b = document.getElementById("add-save-btn");
+      b.dataset.overwrite = ""; b.textContent = "儲存紀錄";
+      b.classList.replace("bg-rose-600", "bg-indigo-600");
+    }
+
+    // 把目前開著的紀錄複製成一筆新紀錄（月份自動 +1），儲存前都可再修改
+    function copyAsNew() {
+      const isSalary = addMode.salIdx !== null;
+      const src = isSalary ? state.salaryData[addMode.salIdx].id : addMode.ccMonth;
+      addMode = { salIdx: null, ccMonth: null };
+      if (isSalary) {
+        const y = parseInt(document.getElementById("sal-year").value), m = parseInt(document.getElementById("sal-month").value);
+        if (y && m) { const [ny, nm] = nextMonth(y, m); document.getElementById("sal-year").value = ny; document.getElementById("sal-month").value = nm; }
+      } else {
+        const mt = document.getElementById("cc-month-label").value.match(/^(\d{4})\D+(\d{1,2})/);
+        if (mt) { const [ny, nm] = nextMonth(+mt[1], +mt[2]); document.getElementById("cc-month-label").value = ymKey(ny, nm); }
+      }
+      document.getElementById("add-modal-title").innerText = `📋 由 ${src} 複製的新紀錄`;
+      resetDeleteBtn("add-delete-btn", false);
+      document.getElementById("add-copy-btn").classList.add("hidden");
+      resetSaveBtn();
+      updateAddPreview();
+      showToast("已複製，月份已改為下個月，確認後按儲存", "info");
+      const focusId = isSalary ? "sal-month" : "cc-month-label";
+      setTimeout(() => document.getElementById(focusId).focus(), 50);
+    }
+
+    // ── 依卡片批次輸入 ──
+    let cbCard = "兆豐", cbDraft = {};
+    function parseYM(raw) {
+      const mt = String(raw || "").trim().match(/^(\d{4})\s*[\/\-.年]\s*(\d{1,2})\s*月?$/);
+      return mt && +mt[2] >= 1 && +mt[2] <= 12 ? [+mt[1], +mt[2]] : null;
+    }
+    function prevMonth(y, m) { return m <= 1 ? [y - 1, 12] : [y, m - 1]; }
+
+    function openCardBatch(card) {
+      if (card && ccKeys.includes(card)) cbCard = card;
+      cbDraft = {};
+      document.getElementById("cb-rows").innerHTML = "";
+      const last = state.ccRaw.slice(-1)[0];
+      document.getElementById("cb-end").value = last ? last.m : ymKey(new Date().getFullYear(), new Date().getMonth() + 1);
+      renderCardTabs();
+      buildCardBatchRows();
+      document.getElementById("card-batch-modal").classList.remove("hidden");
+    }
+    function closeCardBatch() { document.getElementById("card-batch-modal").classList.add("hidden"); }
+
+    function renderCardTabs() {
+      document.getElementById("cb-card-tabs").innerHTML = ccKeys.map((k, i) =>
+        `<button type="button" onclick="pickBatchCard('${k}')" class="py-2 rounded-xl text-xs font-semibold border transition-all ${k === cbCard ? "bg-violet-600 border-violet-600 text-white" : "bg-white border-slate-200 text-slate-600"}">${ccLabels[i]}</button>`).join("");
+    }
+    function pickBatchCard(k) {
+      stashBatchDraft();
+      cbCard = k; cbDraft = {};
+      renderCardTabs(); buildCardBatchRows();
+    }
+    function stashBatchDraft() {
+      document.querySelectorAll(".cb-input").forEach(inp => { cbDraft[inp.dataset.m] = inp.value; });
+    }
+
+    function buildCardBatchRows() {
+      stashBatchDraft();
+      const end = parseYM(document.getElementById("cb-end").value);
+      const box = document.getElementById("cb-rows");
+      if (!end) { box.innerHTML = `<p class="text-xs text-rose-600">月份格式請用 YYYY/MM，例如 2026/05</p>`; return; }
+      document.getElementById("cb-end").value = ymKey(end[0], end[1]);
+      const count = parseInt(document.getElementById("cb-count").value) || 3;
+      const months = []; let [y, m] = end;
+      for (let i = 0; i < count; i++) { months.unshift(ymKey(y, m)); [y, m] = prevMonth(y, m); }
+      const label = ccLabels[ccKeys.indexOf(cbCard)];
+      box.innerHTML = months.map(key => {
+        const rec = state.ccRaw.find(c => c.m === key);
+        const cur = rec ? (rec[cbCard] || 0) : null;
+        const val = key in cbDraft ? cbDraft[key] : (cur ?? "");
+        return `<div class="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+          <div class="flex-1 min-w-0"><div class="text-xs font-bold text-slate-700">${key}</div><div class="text-[10px] ${rec ? "text-slate-400" : "text-indigo-500"}">${rec ? `目前 ${label}：$${fmt(cur)}` : "新月份，會建立帳單"}</div></div>
+          <input type="number" inputmode="numeric" class="cb-input w-28 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-right outline-none font-bold text-violet-700" data-m="${key}" value="${val}" placeholder="${rec ? "不變動" : "未輸入"}" oninput="updateBatchSummary()" onfocus="this.select()">
+        </div>`;
+      }).join("");
+      document.getElementById("cb-summary-label").innerText = `${label}　${months[0]} ～ ${months[months.length - 1]} 合計`;
+      updateBatchSummary();
+    }
+    function updateBatchSummary() {
+      let sum = 0;
+      document.querySelectorAll(".cb-input").forEach(inp => { sum += parseInt(inp.value) || 0; });
+      document.getElementById("cb-summary").innerText = `$${fmt(sum)}`;
+    }
+
+    function saveCardBatch() {
+      const inputs = [...document.querySelectorAll(".cb-input")].filter(inp => inp.value.trim() !== "");
+      if (!inputs.length) return showToast("至少輸入一個月份的金額", "error");
+      if (inputs.some(inp => !(parseInt(inp.value) >= 0))) return showToast("金額不可為負數", "error");
+      let created = 0, changed = 0;
+      inputs.forEach(inp => {
+        const key = inp.dataset.m;
+        let rec = state.ccRaw.find(c => c.m === key);
+        if (rec && (rec[cbCard] || 0) === parseInt(inp.value)) return; // 沒改的月份略過
+        changed++;
+        if (!rec) { rec = { m: key }; ccKeys.forEach(k => rec[k] = 0); state.ccRaw.push(rec); created++; }
+        rec[cbCard] = parseInt(inp.value);
+      });
+      sortData(); autoSave(); closeCardBatch(); renderAll();
+      const label = ccLabels[ccKeys.indexOf(cbCard)];
+      showToast(changed ? `已更新 ${label} ${changed} 個月${created ? `（其中 ${created} 個是新月份）` : ""}` : "金額都沒有變動", changed ? "success" : "info");
+    }
+
+    function deleteRecord() {
+      if (addMode.salIdx !== null) state.salaryData.splice(addMode.salIdx, 1);
+      else if (addMode.ccMonth) state.ccRaw = state.ccRaw.filter(c => c.m !== addMode.ccMonth);
+      closeAddModal(); autoSave(); renderAll(); showToast("紀錄已刪除");
+    }
+
+    function editSalary(i) {
+      const r = state.salaryData[i];
+      if (!r) return;
+      openAddModal();
+      addMode.salIdx = i;
+      document.getElementById("modal-type").value = "salary"; onModalTypeChange();
+      document.getElementById("modal-type").disabled = true;
+      document.getElementById("sal-year").value = r.year;
+      document.getElementById("sal-month").value = r.month;
+      document.getElementById("sal-base").value = r.base;
+      document.getElementById("sal-gross").value = r.gross;
+      document.getElementById("sal-ded").value = r.ded;
+      document.getElementById("sal-isbonus").value = String(!!r.isBonus);
+      document.getElementById("sal-note").value = r.bonusNote || "";
+      document.getElementById("add-modal-title").innerText = `✏️ 編輯薪資單 ${r.id}`;
+      resetDeleteBtn("add-delete-btn", true);
+      document.getElementById("add-copy-btn").classList.remove("hidden");
+      updateAddPreview();
+    }
+
+    function openCreditFor(monthKey) {
+      openAddModal();
+      document.getElementById("modal-type").value = "credit"; onModalTypeChange();
+      document.getElementById("cc-month-label").value = monthKey;
+    }
+
+    function editCreditBill(monthStr) {
+      const bill = state.ccRaw.find(c => c.m === monthStr);
+      if (!bill) return;
+      openAddModal();
+      addMode.ccMonth = monthStr;
+      document.getElementById("modal-type").value = "credit"; onModalTypeChange();
+      document.getElementById("modal-type").disabled = true;
+      document.getElementById("cc-month-label").value = bill.m;
+      document.getElementById("cc-taishin").value = bill["台新"] || 0;
+      document.getElementById("cc-cardA").value = bill["cardA"] || 0;
+      document.getElementById("cc-cardB").value = bill["cardB"] || 0;
+      document.getElementById("cc-ctbc").value = bill["中信"] || 0;
+      document.getElementById("cc-megabank").value = bill["兆豐"] || 0;
+      document.getElementById("cc-esun").value = bill["玉山"] || 0;
+      document.getElementById("add-modal-title").innerText = `✏️ 編輯 ${monthStr} 消費帳單`;
+      resetDeleteBtn("add-delete-btn", true);
+      document.getElementById("add-copy-btn").classList.remove("hidden");
+      updateAddPreview();
+    }
+
+    let activeBankIndex = null, activeAccIndex = null;
+    function openBankModal(bIdx, aIdx) {
+      activeBankIndex = bIdx; activeAccIndex = aIdx;
+      const b = state.bankAccounts[bIdx], a = b.accounts[aIdx];
+      document.getElementById("bm-bank").value = b.bank; document.getElementById("bm-acc-name").value = `${a.name}（${a.no}）`; document.getElementById("bm-balance").value = a.bal;
+      document.getElementById("bank-modal").classList.remove("hidden");
+      setTimeout(() => document.getElementById("bm-balance").select(), 50);
+    }
+    function closeBankModal() { document.getElementById("bank-modal").classList.add("hidden"); }
+    function saveBankBalance() {
+      const newBal = parseInt(document.getElementById("bm-balance").value);
+      if (!Number.isFinite(newBal)) return showToast("請輸入餘額", "error");
+      state.bankAccounts[activeBankIndex].accounts[activeAccIndex].bal = newBal;
+      state.meta = { ...(state.meta || {}), balanceUpdatedAt: todayISO() };
+      closeBankModal(); autoSave(); renderAll(); showToast("存款餘額已更新");
+    }
+
+    function openBudgetModal() {
+      const container = document.getElementById("budget-edit-list");
+      container.innerHTML = Object.entries(state.budgetData).map(([cat, amt]) => `
+        <div class="flex items-center justify-between gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+          <span class="text-xs font-bold text-slate-700">${esc(cat)}</span>
+          <input type="number" inputmode="numeric" data-cat="${esc(cat)}" value="${amt}" class="budget-input w-28 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-right outline-none font-bold text-blue-600">
+        </div>`).join("");
+      document.getElementById("budget-modal").classList.remove("hidden");
+    }
+    function closeBudgetModal() { document.getElementById("budget-modal").classList.add("hidden"); }
+    function saveBudgets() {
+      document.querySelectorAll(".budget-input").forEach(input => {
+        state.budgetData[input.getAttribute("data-cat")] = parseInt(input.value) || 0;
+      });
+      closeBudgetModal(); autoSave(); renderAll(); showToast("預算額度已更新！");
+    }
+
+    function openInsModal(origIdx = null) {
+      const modalTitle = document.getElementById("ins-modal-title");
+      const delBtn = document.getElementById("ins-delete-btn");
+      
+      if (origIdx !== null) {
+        const ins = state.insurances[origIdx];
+        modalTitle.innerText = "✏️ 編輯保單設定";
+        document.getElementById("ins-orig-idx").value = origIdx;
+        document.getElementById("ins-name").value = ins.name;
+        document.getElementById("ins-cover").value = ins.cover;
+        document.getElementById("ins-year-input").value = ins.year || 2025;
+        document.getElementById("ins-month").value = ins.month;
+        document.getElementById("ins-day").value = ins.day;
+        document.getElementById("ins-annual").value = ins.annual;
+        document.getElementById("ins-card").value = ins.card;
+        document.getElementById("ins-note").value = ins.note;
+        resetDeleteBtn("ins-delete-btn", true);
+      } else {
+        modalTitle.innerText = "➕ 新增保單紀錄";
+        document.getElementById("ins-orig-idx").value = "";
+        document.getElementById("ins-name").value = "";
+        document.getElementById("ins-cover").value = "個人";
+        document.getElementById("ins-year-input").value = currentInsYear === 'compare' ? getDerivedData().curYear : currentInsYear;
+        document.getElementById("ins-month").value = 1;
+        document.getElementById("ins-day").value = 1;
+        document.getElementById("ins-annual").value = 10000;
+        document.getElementById("ins-card").value = "兆豐";
+        document.getElementById("ins-note").value = "年繳";
+        resetDeleteBtn("ins-delete-btn", false);
+      }
+      document.getElementById("ins-modal-panel").classList.remove("hidden");
+    }
+
+    function closeInsModal() { document.getElementById("ins-modal-panel").classList.add("hidden"); }
+
+    function saveInsurance() {
+      const origIdx = document.getElementById("ins-orig-idx").value;
+      const name = document.getElementById("ins-name").value.trim();
+      const cover = document.getElementById("ins-cover").value.trim();
+      const year = parseInt(document.getElementById("ins-year-input").value) || (currentInsYear === 'compare' ? getDerivedData().curYear : currentInsYear);
+      const month = parseInt(document.getElementById("ins-month").value) || 1;
+      const day = parseInt(document.getElementById("ins-day").value) || 1;
+      const annual = parseInt(document.getElementById("ins-annual").value) || 0;
+      const card = document.getElementById("ins-card").value;
+      const note = document.getElementById("ins-note").value.trim();
+
+      if (!name) return showToast("請輸入保險名稱", "error");
+      if (annual <= 0) return showToast("請輸入年繳保費", "error");
+
+      const updatedItem = { year, name, cover, month, day, annual, card, note };
+
+      if (origIdx !== "") {
+        state.insurances[parseInt(origIdx)] = updatedItem;
+      } else {
+        state.insurances.push(updatedItem);
+      }
+
+      syncInsBudget();
+      closeInsModal(); autoSave();
+      if (currentInsYear !== 'compare') switchInsYear(year); 
+      else renderAll();
+      showToast("保單已儲存");
+    }
+
+    function deleteInsurance() {
+      const origIdx = document.getElementById("ins-orig-idx").value;
+      if (origIdx !== "") {
+        state.insurances.splice(parseInt(origIdx), 1);
+        syncInsBudget();
+      }
+      closeInsModal(); autoSave(); renderAll(); showToast("保單已刪除");
+    }
+
+    // 預算中的「保險費用」跟著預算年度的保單總額更新
+    function syncInsBudget() {
+      const y = getDerivedData().prevYear;
+      const rows = state.insurances.filter(i => (i.year || 2025) === y);
+      if (rows.length) state.budgetData["保險費用"] = rows.reduce((s, i) => s + i.annual, 0);
+    }
+
+    function copyInsFromYear(from, to) {
+      const src = state.insurances.filter(i => (i.year || 2025) === from);
+      src.forEach(i => state.insurances.push({ ...i, year: to }));
+      autoSave(); switchInsYear(to);
+      showToast(`已沿用 ${src.length} 份保單，金額有變動可點「編輯」修改`, "info");
+    }
+
+    function openHealthDetail(typeKey) {
+      const d = getDerivedData();
+      const header = document.getElementById("health-modal-header");
+      const title = document.getElementById("hm-title");
+      const content = document.getElementById("health-modal-content");
+      header.className = "px-5 py-4 text-white flex justify-between items-center ";
+      const big = (label, val, good, note = "") => `<div class="text-center p-4 bg-slate-50 rounded-2xl border border-slate-100"><div class="text-xs text-slate-400 font-medium">${label}</div><div class="text-3xl font-black ${good ? "text-emerald-600" : "text-rose-600"} mt-1">${val}</div>${note ? `<p class="text-[10px] text-slate-400 mt-2">${note}</p>` : ""}</div>`;
+
+      if (typeKey === "savings") {
+        const rate = parseFloat(d.savingsRate);
+        title.innerText = `📈 ${d.curYear} 年儲蓄率詳情`;
+        header.className += rate < 10 ? (rate < 0 ? "bg-rose-600" : "bg-amber-600") : "bg-emerald-600";
+        const regular = d.curMonths.filter(m => !d.bonusMonthsCur.includes(m.month));
+        const regRate = regular.length ? (regular.reduce((s, m) => s + m.surplus, 0) / Math.max(1, regular.reduce((s, m) => s + m.income, 0)) * 100).toFixed(1) : null;
+        const verdict = rate < 0
+          ? `<strong class="text-rose-600">平均儲蓄率為負值（${d.savingsRate}%）。</strong><br>平均每月的信用卡支出已超過實領收入。`
+          : `<strong class="${rate >= 20 ? "text-emerald-600" : "text-amber-600"}">平均儲蓄率 ${d.savingsRate}%，${rate >= 20 ? "表現良好" : rate >= 10 ? "尚可，仍有提升空間" : "偏低，建議檢視大額消費"}。</strong>`;
+        const bonusNote = d.bonusMonthsCur.length && regRate !== null
+          ? `<br>其中 ${d.bonusMonthsCur.join("、")} 月有獎金入帳；只看沒有獎金的月份，儲蓄率為 <strong>${regRate}%</strong>，這比較接近日常的收支狀況。` : "";
+        const rowsHtml = d.curMonths.map(m => `<div class="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0 text-xs"><span class="font-semibold text-slate-600">${m.label}${d.bonusMonthsCur.includes(m.month) ? ' <span class="text-[9px] text-amber-600">含獎金</span>' : ""}</span><div class="text-right"><div class="text-slate-800">實領 $${fmt(m.income)}</div><div class="text-slate-500 text-[10px]">卡費 $${fmt(m.expense)}</div><div class="${m.surplus >= 0 ? "text-emerald-600" : "text-rose-600"} font-bold text-[10px] mt-0.5">${m.surplus >= 0 ? "結餘" : "赤字"} $${fmt(Math.abs(m.surplus))}</div></div></div>`).join("");
+        content.innerHTML = big(`${d.curYear} 年已出帳 ${d.curMonths.length} 個月平均`, `${d.savingsRate}%`, rate >= 0, "公式：(實領收入 − 卡費支出) ÷ 實領收入") +
+          `<div class="space-y-2 mt-4"><h5 class="text-xs font-bold text-slate-800">💡 診斷</h5><p class="text-xs text-slate-600 leading-relaxed">${verdict}${bonusNote}</p></div>` +
+          `<div class="space-y-2 mt-4"><h5 class="text-xs font-bold text-slate-800">📊 ${d.curYear} 年逐月收支</h5><div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 max-h-48 overflow-y-auto no-scrollbar">${rowsHtml || '<p class="text-xs text-slate-400">尚無已出帳月份</p>'}</div></div>`;
+      } else if (typeKey === "budget") {
+        const val = parseFloat(d.budgetUsed);
+        title.innerText = `🎯 ${d.prevYear} 年預算執行率詳情`;
+        header.className += val > 100 ? "bg-rose-600" : "bg-emerald-600";
+        content.innerHTML = big(`預算執行率（${d.prevYear} 年）`, `${d.budgetUsed}%`, val <= 100) +
+          `<div class="space-y-2 mt-4"><h5 class="text-xs font-bold text-slate-800">💡 預算對比</h5><div class="text-xs text-slate-600 space-y-1.5"><div>年度預算總額：<strong>$${fmt(d.totalBudget)}</strong></div><div>年度卡費支出：<strong>$${fmt(d.totalPrevCC)}</strong>（${d.prevCCMonths} 個月帳單）</div><div>平均每月卡費：<strong>$${fmt(d.avgPrevCCMonth)}</strong>，預算月均為 <strong>$${fmt(Math.round(d.totalBudget / 12))}</strong></div></div><p class="text-[10px] text-slate-400 leading-relaxed">注意：預算包含子女教育、稅務等未必刷卡支付的項目，卡費只是支出的一部分。</p></div>`;
+      } else if (typeKey === "surplus") {
+        const surplus = d.avgCurIncome - d.avgCurExpense;
+        title.innerText = `💵 ${d.curYear} 年月均結餘詳情`;
+        header.className += surplus < 0 ? "bg-rose-600" : "bg-emerald-600";
+        const best = [...d.curMonths].sort((a, b) => b.surplus - a.surplus)[0], worst = [...d.curMonths].sort((a, b) => a.surplus - b.surplus)[0];
+        content.innerHTML = big(`月均結餘（${d.curYear} 年）`, `${surplus < 0 ? "−" : "+"}$${fmt(Math.abs(surplus))}`, surplus >= 0, `月均收入 $${fmt(d.avgCurIncome)} − 月均卡費 $${fmt(d.avgCurExpense)}`) +
+          (best ? `<div class="grid grid-cols-2 gap-2 mt-4 text-xs"><div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100"><div class="text-[10px] text-emerald-700">結餘最多</div><div class="font-bold text-emerald-700 mt-0.5">${best.label}　$${fmt(best.surplus)}</div></div><div class="p-3 rounded-xl bg-rose-50 border border-rose-100"><div class="text-[10px] text-rose-700">結餘最少</div><div class="font-bold text-rose-700 mt-0.5">${worst.label}　$${fmt(worst.surplus)}</div></div></div>` : "");
+      }
+      document.getElementById("health-modal").classList.remove("hidden");
+    }
+    function closeHealthModal() { document.getElementById("health-modal").classList.add("hidden"); }
+
+    function openSettingsModal() {
+      document.getElementById("card-label-inputs").innerHTML = ccKeys.map((k, i) =>
+        `<label class="block"><span class="block text-[10px] text-slate-400 mb-0.5">${esc(DEFAULT_CARD_LABELS[k])}</span><input type="text" maxlength="10" data-cardkey="${k}" value="${esc(state.meta?.cardLabels?.[k] || "")}" placeholder="${esc(DEFAULT_CARD_LABELS[k])}" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs outline-none"></label>`).join("");
+      document.getElementById("settings-modal").classList.remove("hidden");
+    }
+    function saveCardLabels() {
+      const labels = {};
+      document.querySelectorAll("[data-cardkey]").forEach(inp => { const v = inp.value.trim(); if (v) labels[inp.dataset.cardkey] = v; });
+      state.meta = { ...(state.meta || {}), cardLabels: labels };
+      autoSave(); closeSettingsModal(); renderAll(); showToast("卡片名稱已更新");
+    }
+    function closeSettingsModal() { document.getElementById("settings-modal").classList.add("hidden"); }
+
+    function exportSystemData() {
+      const payload = { appId: "personal_finance_manager_tw", schemaVersion: "1.0", data: state };
+      const a = document.createElement('a');
+      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+      a.download = `財務備份_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      state.meta = { ...(state.meta || {}), lastBackupAt: new Date().toISOString() };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+      renderNotice();
+      showToast("備份已下載"); closeSettingsModal();
+    }
+    function importSystemData(event) {
+      const file = event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!imported.data || !Array.isArray(imported.data.salaryData) || !Array.isArray(imported.data.ccRaw)) {
+            return showToast("這不是本系統的備份檔，請確認檔案", "error");
+          }
+          if (imported.data) {
+            state.salaryData = imported.data.salaryData || state.salaryData;
+            state.ccRaw = migrateCardKeys(imported.data.ccRaw || state.ccRaw);
+            state.budgetData = { ...state.budgetData, ...imported.data.budgetData };
+            state.bankAccounts = imported.data.bankAccounts || state.bankAccounts;
+            state.insurances = imported.data.insurances || state.insurances;
+            state.meta = imported.data.meta || state.meta;
+            if (imported.data.meta?.cardLabels) state.meta.cardLabels = imported.data.meta.cardLabels;
+            state.meta = { ...(state.meta || {}), lastBackupAt: new Date().toISOString() }; // 剛從備份還原，視同已備份
+          }
+          sortData(); autoSave(); renderAll(); showToast("還原成功！"); closeSettingsModal();
+        } catch (error) { showToast("還原失敗：檔案不是有效的 JSON", "error"); }
+      };
+      reader.readAsText(file); event.target.value = "";
+    }
+    function openConfirmResetModal() { document.getElementById("confirm-reset-modal").classList.remove("hidden"); }
+    function closeConfirmResetModal() { document.getElementById("confirm-reset-modal").classList.add("hidden"); }
+    function executeResetData() { state = JSON.parse(JSON.stringify(DEFAULT_STATE)); sortData(); autoSave(); closeConfirmResetModal(); closeSettingsModal(); renderAll(); showToast("系統已重設！"); }
+
+    const MODAL_IDS = ["confirm-reset-modal", "card-batch-modal", "health-modal", "ins-modal-panel", "budget-modal", "bank-modal", "add-modal", "settings-modal"];
+    function setupModals() {
+      MODAL_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true");
+        el.addEventListener("click", e => { if (e.target === el) el.classList.add("hidden"); });
+      });
+      document.addEventListener("keydown", e => {
+        if (e.key !== "Escape") return;
+        const open = MODAL_IDS.find(id => !document.getElementById(id).classList.contains("hidden"));
+        if (open) document.getElementById(open).classList.add("hidden");
+      });
+      // 數字輸入框按 Enter 直接儲存
+      [["card-batch-modal", saveCardBatch], ["add-modal", saveRecord], ["bank-modal", saveBankBalance], ["budget-modal", saveBudgets], ["ins-modal-panel", saveInsurance]].forEach(([id, fn]) => {
+        document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); fn(); } });
+      });
+    }
+
+    window.onload = function() {
+      initData();
+      setupModals();
+      renderAll();
+    }
+  </script>
+</body>
+</html>
